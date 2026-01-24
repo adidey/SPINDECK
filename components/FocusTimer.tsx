@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FocusMode } from '../types';
-import { FOCUS_CONFIG, COLORS } from '../constants';
+import { FOCUS_CONFIG } from '../constants';
 
 interface FocusTimerProps {
   mode: FocusMode;
@@ -43,23 +43,24 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ mode, isActive, onComplete, onT
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const strokeDasharray = 2 * Math.PI * 185;
+  const strokeDasharray = 2 * Math.PI * 195;
   const strokeDashoffset = strokeDasharray * (1 - timeLeft / total);
 
   return (
     <div className="relative flex items-center justify-center">
-      {/* Precision Meter */}
-      <svg className="w-[440px] h-[440px] -rotate-90 pointer-events-none">
+      {/* Industrial Meter Ring */}
+      <svg className="w-[480px] h-[480px] -rotate-90 pointer-events-none">
         <circle
-          cx="220" cy="220" r="185"
+          cx="240" cy="240" r="195"
           fill="transparent"
-          stroke="#1A1A1A"
+          stroke="#27272A"
           strokeWidth="1"
+          strokeDasharray="4, 6"
         />
         <circle
-          cx="220" cy="220" r="185"
+          cx="240" cy="240" r="195"
           fill="transparent"
-          stroke={FOCUS_CONFIG[mode].color}
+          stroke={isActive ? FOCUS_CONFIG[mode].color : '#3F3F46'}
           strokeWidth="2"
           strokeDasharray={strokeDasharray}
           strokeDashoffset={strokeDashoffset}
@@ -67,15 +68,15 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ mode, isActive, onComplete, onT
         />
       </svg>
       
-      {/* Digital Readout */}
-      <div className="absolute top-[15%] flex flex-col items-center">
-        <div className="flex items-center gap-2 mb-1">
-          <div className={`w-1 h-1 rounded-full ${isActive ? 'bg-red-600' : 'bg-[#333]'}`} />
-          <span className="text-[10px] font-mono text-[#444] tracking-[0.2em] uppercase">
-            System Monitoring
+      {/* Center Readout Display */}
+      <div className="absolute top-[12%] flex flex-col items-center">
+        <div className="flex items-center gap-3 mb-2">
+          <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-red-500 animate-pulse' : 'bg-zinc-800'}`} />
+          <span className="text-[10px] font-mono text-zinc-500 tracking-[0.3em] uppercase font-bold">
+            SIGNAL_READOUT
           </span>
         </div>
-        <span className="text-4xl font-mono font-medium text-white tracking-tight">
+        <span className="text-5xl font-mono font-medium text-white tracking-tighter tabular-nums">
           {formatTime(timeLeft)}
         </span>
       </div>

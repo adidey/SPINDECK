@@ -28,7 +28,7 @@ const VinylPlayer: React.FC<VinylPlayerProps> = ({
     const animate = () => {
       if (isPlaying && !isDragging) {
         setRotation(prev => {
-          const delta = (rotationSpeed * 0.12);
+          const delta = (rotationSpeed * 0.1);
           currentRotationRef.current = (prev + delta) % 360;
           return currentRotationRef.current;
         });
@@ -60,7 +60,7 @@ const VinylPlayer: React.FC<VinylPlayerProps> = ({
     const newRotation = angle - startAngleRef.current;
     const delta = newRotation - currentRotationRef.current;
     if (Math.abs(delta) < 180) {
-      const seekFactor = 0.003;
+      const seekFactor = 0.002;
       onScrub(Math.max(0, Math.min(1, progress + (delta * seekFactor))));
     }
     setRotation(newRotation);
@@ -69,9 +69,10 @@ const VinylPlayer: React.FC<VinylPlayerProps> = ({
 
   return (
     <div className="relative flex items-center justify-center">
-      {/* Precision Frame */}
-      <div className="absolute w-[400px] h-[400px] border border-[#222] rounded-full pointer-events-none" />
+      {/* Precision Industrial Frame */}
+      <div className="absolute w-[420px] h-[420px] border border-[#27272A] rounded-full pointer-events-none opacity-50" />
       
+      {/* Platter Base */}
       <div 
         ref={containerRef}
         onPointerDown={handlePointerDown}
@@ -82,49 +83,49 @@ const VinylPlayer: React.FC<VinylPlayerProps> = ({
         style={{ touchAction: 'none' }}
       >
         <div 
-          className="absolute inset-0 rounded-full bg-[#0A0A0A] border border-[#222] overflow-hidden flex items-center justify-center shadow-[0_0_40px_rgba(0,0,0,0.5)]"
+          className="absolute inset-0 rounded-full bg-[#121212] border-2 border-[#1E1E1E] overflow-hidden flex items-center justify-center shadow-2xl"
           style={{ transform: `rotate(${rotation}deg)` }}
         >
-          {/* Groove Texture */}
-          <div className="absolute inset-0 opacity-40 bg-[repeating-radial-gradient(circle_at_center,_#111_0px,_#111_0.5px,_#000_1px)]" />
+          {/* Mechanical Groove Texture - Subtle and Matte */}
+          <div className="absolute inset-0 opacity-20 bg-[repeating-radial-gradient(circle_at_center,_#222_0px,_#222_0.5px,_#000_1px)]" />
           
-          {/* Industrial Center Label with 8-bit Display Aesthetic */}
-          <div className="relative w-28 h-28 rounded-full border-[10px] border-[#0A0A0A] bg-black overflow-hidden flex flex-col items-center justify-center shadow-inner">
-            {/* 8-bit styled Image */}
-            <div className="absolute inset-0 w-full h-full overflow-hidden">
-               <img 
+          {/* Stroboscopic Markings on Rim */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {[...Array(60)].map((_, i) => (
+              <div 
+                key={i} 
+                className="absolute h-full w-[1px]" 
+                style={{ transform: `rotate(${i * 6}deg)` }}
+              >
+                <div className="w-[1px] h-2 bg-[#222] absolute top-0" />
+              </div>
+            ))}
+          </div>
+
+          {/* Center Display Label */}
+          <div className="relative w-32 h-32 rounded-full border-[1px] border-[#222] bg-[#0A0A0A] overflow-hidden flex flex-col items-center justify-center">
+             <img 
                 src={currentTrack.albumArt} 
                 alt=""
-                className="w-full h-full object-cover opacity-90"
+                className="absolute inset-0 w-full h-full object-cover grayscale brightness-50 contrast-125"
                 style={{ imageRendering: 'pixelated' }}
                 draggable={false}
               />
-              {/* Pixel Grid / Scanline Overlay */}
-              <div 
-                className="absolute inset-0 pointer-events-none opacity-30" 
-                style={{ 
-                  backgroundImage: `linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))`,
-                  backgroundSize: '100% 2px, 3px 100%'
-                }} 
-              />
-              {/* Subtle CRT Flicker effect could be added here if desired */}
-            </div>
-
-            {/* Overlay for "Digital Display" aesthetic */}
-            <div className="absolute inset-0 bg-black/10" />
-            
-            <div className="z-10 bg-white/90 backdrop-blur-sm px-2 py-0.5 border border-black/20 text-[7px] font-mono font-bold text-black tracking-tight flex flex-col items-center shadow-sm">
-              <span className="leading-none">SIGNAL_READY</span>
-              <span className="opacity-40 text-[5px]">CORE_v.2.0</span>
-            </div>
-            
-            {/* Spindle hole */}
-            <div className="z-10 mt-1.5 w-2.5 h-2.5 bg-[#0A0A0A] rounded-full border border-white/5" />
+              {/* Overlay for matte CRT aesthetic */}
+              <div className="absolute inset-0 bg-black/40" />
+              
+              {/* Technical Readout */}
+              <div className="z-10 flex flex-col items-center gap-1">
+                <div className="bg-white px-1.5 py-0.5 text-[6px] font-mono font-bold text-black uppercase tracking-tighter">
+                  ACT_STATE: {isPlaying ? 'RUN' : 'STP'}
+                </div>
+                <div className="w-1.5 h-1.5 bg-white rounded-full mt-1" />
+              </div>
           </div>
         </div>
         
-        {/* Subtle Matte Reflection */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+        {/* Subtle Matte Sheen */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/5 via-transparent to-transparent pointer-events-none" />
       </div>
     </div>
   );

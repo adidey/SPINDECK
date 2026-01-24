@@ -11,6 +11,8 @@ export interface Track {
   artist: string;
   albumArt: string;
   durationMs: number;
+  albumTitle: string;
+  trackNumber: number;
 }
 
 export interface SessionRecord {

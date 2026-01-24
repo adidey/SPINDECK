@@ -1,11 +1,10 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { GoogleGenAI, Type } from '@google/genai';
 import { FocusMode, Track, SessionRecord } from './types';
-import { COLORS, FOCUS_CONFIG, MOCK_TRACKS } from './constants';
-import VinylPlayer from './components/VinylPlayer';
-import FocusTimer from './components/FocusTimer';
-import TrackInfo from './components/TrackInfo';
+import { FOCUS_CONFIG, MOCK_TRACKS } from './constants';
+import DeviceDisplay from './components/DeviceDisplay';
+import Knob from './components/Knob';
 import HistoryPanel from './components/HistoryPanel';
 
 const App: React.FC = () => {
@@ -14,29 +13,88 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<SessionRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   
+  const [tracks, setTracks] = useState<Track[]>(MOCK_TRACKS);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [playbackProgress, setPlaybackProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [playlistUrl, setPlaylistUrl] = useState('');
+  const [volume, setVolume] = useState(0.7);
+  const [timeLeft, setTimeLeft] = useState(FOCUS_CONFIG[focusMode].duration);
 
-  const [aiTip, setAiTip] = useState("SYSTEM READY");
-  const [isGeneratingTip, setIsGeneratingTip] = useState(false);
+  const [aiStatus, setAiStatus] = useState("SYSTEM_IDLE");
 
-  const currentTrack = MOCK_TRACKS[currentTrackIndex];
+  const currentTrack = useMemo(() => tracks[currentTrackIndex] || MOCK_TRACKS[0], [tracks, currentTrackIndex]);
+
+  const timeStr = useMemo(() => {
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }, [timeLeft]);
+
+  const handleSyncPlaylist = async () => {
+    // If no URL or no API key, just boot the default library
+    const hasKey = process.env.API_KEY && process.env.API_KEY !== 'undefined' && process.env.API_KEY.length > 5;
+    
+    if (!playlistUrl || !hasKey) {
+      setIsSyncing(true);
+      setAiStatus("BOOTING_LOCAL_STORAGE");
+      setTimeout(() => {
+        setTracks(MOCK_TRACKS);
+        setIsSpotifyConnected(true);
+        setIsSyncing(false);
+      }, 1200);
+      return;
+    }
+
+    setIsSyncing(true);
+    setAiStatus("SYNC_PROTOCOL_INIT");
+    
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Analyze this public Spotify playlist URL: ${playlistUrl}. Extract 5 distinct songs. If URL is invalid, pick 5 random vaporwave tracks. Return ONLY a JSON array of objects with keys: id, title, artist, albumArt (use a high-quality Unsplash music URL), durationMs (random 180000-300000), albumTitle, trackNumber.`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING },
+                title: { type: Type.STRING },
+                artist: { type: Type.STRING },
+                albumArt: { type: Type.STRING },
+                durationMs: { type: Type.NUMBER },
+                albumTitle: { type: Type.STRING },
+                trackNumber: { type: Type.NUMBER }
+              },
+              required: ["id", "title", "artist", "albumArt", "durationMs", "albumTitle", "trackNumber"]
+            }
+          }
+        }
+      });
+
+      const text = response.text;
+      const newTracks = JSON.parse(text);
+      setTracks(newTracks);
+      setAiStatus("SYNC_COMPLETE");
+      setTimeout(() => setIsSpotifyConnected(true), 1000);
+    } catch (err) {
+      console.warn("AI Sync failed or no key, using default protocol.");
+      setAiStatus("FALLBACK_TO_INTERNAL");
+      setTimeout(() => setIsSpotifyConnected(true), 1500);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleNextTrack = useCallback(() => {
-    setCurrentTrackIndex(prev => (prev + 1) % MOCK_TRACKS.length);
+    setCurrentTrackIndex(prev => (prev + 1) % tracks.length);
     setPlaybackProgress(0);
-  }, []);
-
-  const handleScrub = useCallback((newProgress: number) => {
-    setPlaybackProgress(newProgress);
-  }, []);
-
-  const handleModeChange = (mode: FocusMode) => {
-    setFocusMode(mode);
-    setIsActive(false);
-  };
+  }, [tracks.length]);
 
   const toggleSession = () => {
     setIsActive(!isActive);
@@ -46,7 +104,6 @@ const App: React.FC = () => {
   const handleSessionComplete = useCallback(() => {
     setIsActive(false);
     setIsPlaying(false);
-    
     const newRecord: SessionRecord = {
       id: Math.random().toString(36).substr(2, 9),
       mode: focusMode,
@@ -55,30 +112,42 @@ const App: React.FC = () => {
       tracks: [currentTrack.title]
     };
     setHistory(prev => [newRecord, ...prev]);
+    setTimeLeft(FOCUS_CONFIG[focusMode].duration);
   }, [focusMode, currentTrack.title]);
 
-  const generateFocusTip = async () => {
-    setIsGeneratingTip(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Industrial focus tip. Max 5 words. Professional, technical, no fluff. Mode: ${focusMode}.`,
-      });
-      setAiTip(response.text.toUpperCase().trim());
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsGeneratingTip(false);
+  // Knob Handlers (Weight, Width, Slant)
+  const handleSlantKnob = (val: number) => {
+    let nextMode = FocusMode.LIGHT;
+    if (val < 0.33) nextMode = FocusMode.BREAK;
+    else if (val > 0.66) nextMode = FocusMode.DEEP;
+    if (nextMode !== focusMode) {
+      setFocusMode(nextMode);
+      if (!isActive) setTimeLeft(FOCUS_CONFIG[nextMode].duration);
     }
   };
+
+  useEffect(() => {
+    let timer: number;
+    if (isActive && timeLeft > 0) {
+      timer = window.setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            handleSessionComplete();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isActive, timeLeft, handleSessionComplete]);
 
   useEffect(() => {
     let interval: number;
     if (isPlaying) {
       interval = window.setInterval(() => {
         setPlaybackProgress(prev => {
-          const inc = 1000 / currentTrack.durationMs;
+          const inc = 1000 / (currentTrack?.durationMs || 180000);
           const next = prev + inc;
           if (next >= 1) {
             handleNextTrack();
@@ -89,146 +158,128 @@ const App: React.FC = () => {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, currentTrack.durationMs, handleNextTrack]);
+  }, [isPlaying, currentTrack, handleNextTrack]);
 
   if (!isSpotifyConnected) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#121212] p-8">
-        <div className="w-full max-w-sm border border-[#222] p-12 bg-[#1A1A1A] text-center flex flex-col items-center">
-          <div className="w-12 h-12 border border-[#444] mb-8 flex items-center justify-center">
-            <div className="w-4 h-4 bg-white" />
+      <div className="min-h-screen flex items-center justify-center bg-[#080808] p-8">
+        <div className="w-full max-w-sm bg-[#121212] rounded-[2.5rem] p-10 text-center flex flex-col items-center chassis-shadow border border-white/5 relative overflow-hidden">
+          {isSyncing && (
+            <div className="absolute inset-0 z-50 bg-[#080808] flex flex-col items-center justify-center p-8">
+               <div className="w-full h-[1px] bg-white/5 mb-8">
+                  <div className="h-full bg-white/40 animate-[loading_1.5s_infinite_linear]" style={{width: '20%'}} />
+               </div>
+               <span className="text-[12px] font-pixel text-white/80 mb-2 tracking-[0.4em] uppercase">{aiStatus}</span>
+            </div>
+          )}
+          
+          <div className="w-16 h-16 bg-[#080808] rounded-2xl border border-white/10 mb-8 flex items-center justify-center shadow-inner">
+            <div className="w-3 h-3 bg-white shadow-[0_0_12px_white] rounded-full" />
           </div>
-          <h1 className="text-xl font-bold tracking-[0.4em] mb-2 uppercase">SPINDECK</h1>
-          <p className="text-[10px] font-mono text-[#555] tracking-widest mb-12 uppercase">Industrial Focus Module v1.0</p>
+          <h1 className="text-2xl font-black tracking-tighter text-white mb-2 uppercase">SPINDECK TYPE-01</h1>
+          <p className="text-[10px] font-mono text-white/20 tracking-widest mb-10 uppercase font-bold">Protocol_Sync_Interface</p>
+          
+          <input 
+            type="text" 
+            placeholder="SPOTIFY_PLAYLIST_URL (OPTIONAL)"
+            value={playlistUrl}
+            onChange={(e) => setPlaylistUrl(e.target.value)}
+            className="w-full bg-[#0a0a0a] border border-white/5 p-4 rounded-xl text-xs font-mono text-white mb-6 focus:outline-none focus:border-white/20 transition-all text-center placeholder:opacity-10"
+          />
+
           <button 
-            onClick={() => setIsSpotifyConnected(true)}
-            className="w-full py-4 border border-white text-white hover:bg-white hover:text-black transition-all font-bold text-xs tracking-widest uppercase"
+            onClick={handleSyncPlaylist}
+            className="w-full py-4 bg-white text-black hover:bg-zinc-200 active:scale-95 transition-all font-black text-xs tracking-[0.2em] uppercase rounded-xl"
           >
-            Connect Interface
+            {playlistUrl ? 'SYNC & BOOT' : 'BOOT DEFAULT'}
           </button>
+          
+          {!playlistUrl && (
+            <p className="mt-6 text-[8px] font-mono text-white/10 tracking-widest uppercase">Direct_Internal_Boot_Enabled</p>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen bg-[#121212] flex flex-col font-sans">
-      {/* Background Grid */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-           style={{ backgroundImage: 'radial-gradient(#FFF 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-
-      {/* Header Bar */}
-      <nav className="relative z-10 h-20 border-b border-[#222] flex justify-between items-center px-10">
-        <div className="flex items-center gap-6">
-          <span className="text-sm font-black tracking-[0.3em] uppercase">SPINDECK</span>
-          <div className="w-[1px] h-4 bg-[#222]" />
-          <span className="text-[9px] font-mono text-[#444] tracking-widest uppercase">Module_01 / Analog_Digital_Hybrid</span>
-        </div>
+    <div className="relative min-h-screen bg-[#050505] flex items-center justify-center overflow-hidden font-sans">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)] pointer-events-none" />
+      
+      <div className="relative w-full max-w-[460px] bg-[#1a1a1e] rounded-[3.5rem] p-4 flex flex-col gap-4 chassis-shadow border border-white/5 group shadow-[0_40px_100px_rgba(0,0,0,1)]">
         
-        <button 
-          onClick={() => setShowHistory(true)}
-          className="text-[10px] font-mono text-[#666] hover:text-white transition-colors tracking-widest uppercase"
+        {/* Side Copper Play/Pause Switch */}
+        <div 
+          onClick={toggleSession}
+          className="absolute -right-2 top-[35%] w-5 h-16 bg-gradient-to-r from-[#b87333] via-[#d2691e] to-[#8b4513] rounded-r-xl border-y border-r border-black/60 cursor-pointer hover:translate-x-0.5 transition-transform z-50 shadow-lg"
         >
-          [ Log_History ]
-        </button>
-      </nav>
-
-      <main className="flex-1 flex flex-col items-center justify-center gap-12 py-10">
-        {/* Mode Selectors - Functional Rectangles */}
-        <div className="flex gap-4 z-20">
-          {(Object.values(FocusMode)).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => handleModeChange(mode)}
-              className={`px-6 py-2 border transition-all text-[10px] font-mono tracking-widest ${
-                focusMode === mode 
-                  ? 'bg-white text-black border-white' 
-                  : 'bg-transparent text-[#444] border-[#222] hover:border-[#444]'
-              }`}
-            >
-              {FOCUS_CONFIG[mode].label} // {mode}
-            </button>
-          ))}
+          <div className={`absolute left-1 right-1 h-6 bg-black/40 rounded-lg shadow-inner transition-all duration-300 ${isActive ? 'bottom-2' : 'top-2'}`} />
         </div>
 
-        {/* Central Unit */}
-        <div className="relative">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-             <FocusTimer mode={focusMode} isActive={isActive} onComplete={handleSessionComplete} />
-          </div>
-          <div className="relative z-10">
-            <VinylPlayer 
-              currentTrack={currentTrack}
-              progress={playbackProgress}
-              isPlaying={isPlaying}
-              onScrub={handleScrub}
-              rotationSpeed={FOCUS_CONFIG[focusMode].rotationSpeed}
+        {/* Device Screen Area - High Contrast Monochrome */}
+        <div className="p-2 bg-[#020202] rounded-[2.8rem] shadow-inner border border-white/5">
+          <DeviceDisplay 
+            track={currentTrack} 
+            progress={playbackProgress} 
+            timeStr={timeStr}
+            isActive={isActive}
+            focusMode={FOCUS_CONFIG[focusMode].label}
+          />
+        </div>
+
+        {/* Chassis Controls Area */}
+        <div className="px-8 py-8 flex flex-col gap-10">
+          {/* Rotary Knobs Section - Exactly as requested */}
+          <div className="flex justify-between items-center">
+            <Knob 
+              label="Weight" 
+              value={volume} 
+              onChange={setVolume}
+            />
+            <Knob 
+              label="Width" 
+              value={playbackProgress} 
+              onChange={setPlaybackProgress}
+            />
+            <Knob 
+              label="Slant" 
+              value={focusMode === FocusMode.DEEP ? 1.0 : focusMode === FocusMode.LIGHT ? 0.5 : 0.0} 
+              onChange={handleSlantKnob}
             />
           </div>
-        </div>
 
-        {/* Playback Controls & Info */}
-        <div className="flex flex-col items-center w-full">
-          <TrackInfo track={currentTrack} progress={playbackProgress} />
-          
-          <div className="flex items-center gap-10 mt-10">
-            {/* Skip Control */}
-            <button 
-              onClick={handleNextTrack}
-              className="group p-4 border border-[#222] hover:border-[#444] transition-all"
-              title="Next Signal"
-            >
-              <svg className="w-5 h-5 text-[#666] group-hover:text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-              </svg>
-            </button>
-
-            {/* Main Action - Signal Red */}
-            <button 
-              onClick={toggleSession}
-              className={`h-16 w-16 flex items-center justify-center border transition-all ${
-                isActive 
-                  ? 'border-[#444] bg-transparent' 
-                  : 'border-[#D91E18] bg-[#D91E18] hover:scale-105'
-              }`}
-            >
-              {isActive ? (
-                <div className="w-4 h-4 bg-white" />
-              ) : (
-                <div className="w-0 h-0 border-t-[8px] border-t-transparent border-l-[12px] border-l-white border-b-[8px] border-b-transparent ml-1" />
-              )}
-            </button>
-
-            {/* AI Generator Button */}
-            <button 
-              onClick={generateFocusTip}
-              className="group p-4 border border-[#222] hover:border-[#444] transition-all"
-              title="Generate Protocol"
-            >
-              <svg className="w-5 h-5 text-[#666] group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </button>
+          {/* Functional Navigation Bar */}
+          <div className="flex justify-between items-center pt-2 px-2 border-t border-white/5">
+            <div className="flex items-center gap-4">
+               <div className="flex gap-1">
+                  <div className={`w-1 h-1 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : 'bg-white/5'}`} />
+                  <div className="w-1 h-1 bg-white/5 rounded-full" />
+                  <div className="w-1 h-1 bg-white/5 rounded-full" />
+               </div>
+               <span className="text-[8px] font-mono text-white/20 tracking-widest uppercase">TYPE_01_SYS</span>
+            </div>
+            <div className="flex items-center gap-6">
+               <button onClick={handleNextTrack} className="text-white/20 hover:text-white transition-all p-2">
+                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+               </button>
+               <button onClick={() => setShowHistory(true)} className="text-white/20 hover:text-white transition-all p-2">
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+               </button>
+            </div>
           </div>
         </div>
-      </main>
 
-      {/* Footer Status */}
-      <footer className="h-16 border-t border-[#222] flex items-center justify-between px-10">
-        <div className="flex items-center gap-3">
-          <div className={`w-1.5 h-1.5 rounded-full ${isGeneratingTip ? 'bg-[#D91E18] animate-pulse' : 'bg-[#444]'}`} />
-          <span className="text-[9px] font-mono text-[#444] tracking-[0.3em] uppercase">
-            {aiTip}
-          </span>
+        {/* Port Detail at bottom */}
+        <div className="flex justify-center gap-8 opacity-20 pb-6">
+           <div className="w-8 h-1 bg-black rounded-full" />
+           <div className="w-14 h-3 bg-black rounded-md border border-white/5 flex items-center justify-center p-1">
+              <div className="w-full h-[1px] bg-white/10" />
+           </div>
+           <div className="w-8 h-1 bg-black rounded-full" />
         </div>
-        <div className="text-[9px] font-mono text-[#222] tracking-widest uppercase">
-          RAMS-INSPIRED CORE / VERSION 1.0.4
-        </div>
-      </footer>
+      </div>
 
-      {showHistory && (
-        <HistoryPanel history={history} onClose={() => setShowHistory(false)} />
-      )}
+      {showHistory && <HistoryPanel history={history} onClose={() => setShowHistory(false)} />}
     </div>
   );
 };
