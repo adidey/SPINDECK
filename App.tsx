@@ -1,11 +1,31 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 import { FocusMode, Track, SessionRecord } from './types.ts';
 import { FOCUS_CONFIG, MOCK_TRACKS } from './constants.tsx';
 import DeviceDisplay from './components/DeviceDisplay.tsx';
 import Knob from './components/Knob.tsx';
 import HistoryPanel from './components/HistoryPanel.tsx';
+
+// Spotify PKCE Helpers
+const generateRandomString = (length: number) => {
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const values = crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(values).map((x) => possible[x % possible.length]).join('');
+};
+
+const sha256 = async (plain: string) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  return window.crypto.subtle.digest('SHA-256', data);
+};
+
+const base64encode = (input: ArrayBuffer) => {
+  return btoa(String.fromCharCode(...new Uint8Array(input)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+};
 
 const App: React.FC = () => {
   const [focusMode, setFocusMode] = useState<FocusMode>(FocusMode.LIGHT);
@@ -23,8 +43,12 @@ const App: React.FC = () => {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [volume, setVolume] = useState(0.7);
   const [timeLeft, setTimeLeft] = useState(FOCUS_CONFIG[focusMode].duration);
-
   const [aiStatus, setAiStatus] = useState("SYSTEM_IDLE");
+
+  // Spotify Web Playback State
+  const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('spotify_access_token'));
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const playerRef = useRef<any>(null);
 
   const currentTrack = useMemo(() => tracks[currentTrackIndex] || MOCK_TRACKS[0], [tracks, currentTrackIndex]);
 
@@ -34,75 +58,184 @@ const App: React.FC = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }, [timeLeft]);
 
+  // --- Spotify SDK Integration ---
+  useEffect(() => {
+    if (!accessToken) return;
+
+    const script = document.createElement("script");
+    script.src = "https://sdk.scdn.co/spotify-player.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    // FIX: Accessing window.onSpotifyWebPlaybackSDKReady and window.Spotify using type assertion to satisfy TypeScript
+    (window as any).onSpotifyWebPlaybackSDKReady = () => {
+      const player = new (window as any).Spotify.Player({
+        name: 'SpinDeck Type-01',
+        getOAuthToken: (cb: (token: string) => void) => { cb(accessToken); },
+        volume: volume
+      });
+
+      player.addListener('ready', ({ device_id }: { device_id: string }) => {
+        console.log('Ready with Device ID', device_id);
+        setDeviceId(device_id);
+        setAiStatus("DEVICE_READY");
+      });
+
+      player.addListener('player_state_changed', (state: any) => {
+        if (!state) return;
+        setIsPlaying(!state.paused);
+        setPlaybackProgress(state.position / state.duration);
+        
+        // Sync metadata if track changed externally
+        const track = state.track_window.current_track;
+        if (track) {
+          const mappedTrack: Track = {
+            id: track.id,
+            title: track.name,
+            artist: track.artists[0].name,
+            albumArt: track.album.images[0].url,
+            durationMs: state.duration,
+            albumTitle: track.album.name,
+            trackNumber: 1
+          };
+          // We don't want to overwrite the whole list usually, 
+          // but we ensure currentTrack reflects reality
+          setTracks(prev => {
+            const exists = prev.find(t => t.id === mappedTrack.id);
+            if (!exists) return [mappedTrack, ...prev];
+            return prev;
+          });
+          const idx = tracks.findIndex(t => t.id === mappedTrack.id);
+          if (idx !== -1) setCurrentTrackIndex(idx);
+        }
+      });
+
+      player.connect();
+      playerRef.current = player;
+    };
+
+    return () => {
+      if (playerRef.current) playerRef.current.disconnect();
+    };
+  }, [accessToken, volume, tracks]);
+
+  useEffect(() => {
+    if (playerRef.current) playerRef.current.setVolume(volume);
+  }, [volume]);
+
+  // --- Spotify Auth Flow (PKCE) ---
+  const handleSpotifyLogin = async () => {
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    if (!clientId) {
+      alert("SPOTIFY_CLIENT_ID missing in environment.");
+      return;
+    }
+
+    const redirectUri = window.location.origin + window.location.pathname;
+    const codeVerifier = generateRandomString(128);
+    const challengeBuffer = await sha256(codeVerifier);
+    const codeChallenge = base64encode(challengeBuffer);
+
+    localStorage.setItem('spotify_code_verifier', codeVerifier);
+
+    const scope = 'user-read-playback-state user-modify-playback-state streaming playlist-read-private';
+    const authUrl = new URL("https://accounts.spotify.com/authorize");
+
+    const params = {
+      response_type: 'code',
+      client_id: clientId,
+      scope: scope,
+      code_challenge_method: 'S256',
+      code_challenge: codeChallenge,
+      redirect_uri: redirectUri,
+    };
+
+    authUrl.search = new URLSearchParams(params).toString();
+    window.location.href = authUrl.toString();
+  };
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+
+    if (code) {
+      const exchangeToken = async () => {
+        setAiStatus("EXCHANGING_TOKENS");
+        const codeVerifier = localStorage.getItem('spotify_code_verifier');
+        const clientId = process.env.SPOTIFY_CLIENT_ID;
+        const redirectUri = window.location.origin + window.location.pathname;
+
+        const response = await fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: clientId || '',
+            grant_type: 'authorization_code',
+            code: code,
+            redirect_uri: redirectUri,
+            code_verifier: codeVerifier || '',
+          }),
+        });
+
+        const data = await response.json();
+        if (data.access_token) {
+          localStorage.setItem('spotify_access_token', data.access_token);
+          setAccessToken(data.access_token);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setAiStatus("AUTHENTICATED");
+        }
+      };
+      exchangeToken();
+    }
+  }, []);
+
   const handleSyncPlaylist = async () => {
-    const envKey = typeof process !== 'undefined' ? process.env?.API_KEY : undefined;
-    const hasKey = envKey && envKey !== 'undefined' && envKey.length > 5;
-    
-    if (!playlistUrl || !hasKey) {
-      setIsSyncing(true);
-      setAiStatus("BOOTING_LOCAL_STORAGE");
-      setTimeout(() => {
-        setTracks(MOCK_TRACKS);
-        setIsSpotifyConnected(true);
-        setIsSyncing(false);
-      }, 1200);
+    if (!accessToken) {
+      handleSpotifyLogin();
       return;
     }
 
     setIsSyncing(true);
-    setAiStatus("SYNC_PROTOCOL_INIT");
-    
+    setAiStatus("FETCHING_PLAYLIST");
+
     try {
-      const ai = new GoogleGenAI({ apiKey: envKey || '' });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Search for this Spotify playlist and identify its tracks: ${playlistUrl}. Extract 5 distinct songs from it. Return ONLY a JSON array of objects with keys: id, title, artist, albumArt (use a high-quality Unsplash music URL related to the track mood), durationMs (actual or random 180000-300000), albumTitle, trackNumber.`,
-        config: {
-          tools: [{ googleSearch: {} }],
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                id: { type: Type.STRING },
-                title: { type: Type.STRING },
-                artist: { type: Type.STRING },
-                albumArt: { type: Type.STRING },
-                durationMs: { type: Type.NUMBER },
-                albumTitle: { type: Type.STRING },
-                trackNumber: { type: Type.NUMBER }
-              },
-              required: ["id", "title", "artist", "albumArt", "durationMs", "albumTitle", "trackNumber"]
-            }
-          }
-        }
+      // Extract ID from URL
+      const playlistId = playlistUrl.split('playlist/')[1]?.split('?')[0];
+      if (!playlistId) throw new Error("Invalid Playlist URL");
+
+      const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
       });
 
-      // Extract Grounding Sources
-      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-      if (chunks) {
-        const links = chunks
-          .filter(chunk => chunk.web)
-          .map(chunk => ({
-            title: chunk.web?.title || 'Source',
-            uri: chunk.web?.uri || '#'
-          }));
-        setGroundingLinks(links);
+      if (!response.ok) throw new Error("Spotify API Error");
+      const data = await response.json();
+
+      const newTracks: Track[] = data.tracks.items.slice(0, 10).map((item: any, idx: number) => ({
+        id: item.track.id,
+        title: item.track.name,
+        artist: item.track.artists[0].name,
+        albumArt: item.track.album.images[0].url,
+        durationMs: item.track.duration_ms,
+        albumTitle: item.track.album.name,
+        trackNumber: idx + 1
+      }));
+
+      setTracks(newTracks);
+      setAiStatus("SYNC_COMPLETE");
+      setTimeout(() => setIsSpotifyConnected(true), 800);
+
+      // Start playback on our device
+      if (deviceId) {
+        await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ context_uri: `spotify:playlist:${playlistId}` })
+        });
       }
 
-      const text = response.text;
-      const newTracks = JSON.parse(text);
-      if (Array.isArray(newTracks) && newTracks.length > 0) {
-        setTracks(newTracks);
-        setAiStatus("SYNC_COMPLETE");
-      } else {
-        throw new Error("Invalid track data");
-      }
-      setTimeout(() => setIsSpotifyConnected(true), 1000);
     } catch (err) {
-      console.warn("AI Sync failed or no key, using default protocol.", err);
-      setAiStatus("FALLBACK_TO_INTERNAL");
+      console.error("Sync failed:", err);
+      setAiStatus("API_ERROR_FALLBACK");
       setTracks(MOCK_TRACKS);
       setTimeout(() => setIsSpotifyConnected(true), 1500);
     } finally {
@@ -110,19 +243,29 @@ const App: React.FC = () => {
     }
   };
 
-  const handleNextTrack = useCallback(() => {
-    setCurrentTrackIndex(prev => (prev + 1) % tracks.length);
-    setPlaybackProgress(0);
+  const handleNextTrack = useCallback(async () => {
+    if (playerRef.current) {
+      await playerRef.current.nextTrack();
+    } else {
+      setCurrentTrackIndex(prev => (prev + 1) % tracks.length);
+      setPlaybackProgress(0);
+    }
   }, [tracks.length]);
 
-  const toggleSession = () => {
-    setIsActive(!isActive);
-    setIsPlaying(!isActive);
+  const toggleSession = async () => {
+    if (playerRef.current) {
+      await playerRef.current.togglePlay();
+    } else {
+      setIsActive(!isActive);
+      setIsPlaying(!isActive);
+    }
   };
 
   const handleSessionComplete = useCallback(() => {
     setIsActive(false);
     setIsPlaying(false);
+    if (playerRef.current) playerRef.current.pause();
+    
     const newRecord: SessionRecord = {
       id: Math.random().toString(36).substr(2, 9),
       mode: focusMode,
@@ -145,6 +288,10 @@ const App: React.FC = () => {
   };
 
   const handleScrub = (newProgress: number) => {
+    if (playerRef.current) {
+      const position = newProgress * currentTrack.durationMs;
+      playerRef.current.seek(position);
+    }
     setPlaybackProgress(newProgress);
   };
 
@@ -164,24 +311,6 @@ const App: React.FC = () => {
     return () => clearInterval(timer);
   }, [isActive, timeLeft, handleSessionComplete]);
 
-  useEffect(() => {
-    let interval: number;
-    if (isPlaying) {
-      interval = window.setInterval(() => {
-        setPlaybackProgress(prev => {
-          const inc = 1000 / (currentTrack?.durationMs || 180000);
-          const next = prev + inc;
-          if (next >= 1) {
-            handleNextTrack();
-            return 0;
-          }
-          return next;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, currentTrack, handleNextTrack]);
-
   if (!isSpotifyConnected) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#080808] p-8">
@@ -199,11 +328,11 @@ const App: React.FC = () => {
             <div className="w-3 h-3 bg-white shadow-[0_0_12px_white] rounded-full" />
           </div>
           <h1 className="text-2xl font-black tracking-tighter text-white mb-2 uppercase">SPINDECK TYPE-01</h1>
-          <p className="text-[10px] font-mono text-white/20 tracking-widest mb-10 uppercase font-bold">Protocol_Sync_Interface</p>
+          <p className="text-[10px] font-mono text-white/20 tracking-widest mb-10 uppercase font-bold">Official_Spotify_Interface</p>
           
           <input 
             type="text" 
-            placeholder="SPOTIFY_PLAYLIST_URL (OPTIONAL)"
+            placeholder="SPOTIFY_PLAYLIST_URL"
             value={playlistUrl}
             onChange={(e) => setPlaylistUrl(e.target.value)}
             className="w-full bg-[#0a0a0a] border border-white/5 p-4 rounded-xl text-xs font-mono text-white mb-6 focus:outline-none focus:border-white/20 transition-all text-center placeholder:opacity-10"
@@ -213,12 +342,15 @@ const App: React.FC = () => {
             onClick={handleSyncPlaylist}
             className="w-full py-4 bg-white text-black hover:bg-zinc-200 active:scale-95 transition-all font-black text-xs tracking-[0.2em] uppercase rounded-xl"
           >
-            {playlistUrl ? 'SYNC & BOOT' : 'BOOT DEFAULT'}
+            {accessToken ? 'SYNC & BOOT' : 'CONNECT SPOTIFY'}
           </button>
           
-          {!playlistUrl && (
-            <p className="mt-6 text-[8px] font-mono text-white/10 tracking-widest uppercase">Direct_Internal_Boot_Enabled</p>
-          )}
+          <div className="mt-8 flex flex-col gap-2">
+            {!accessToken && (
+               <p className="text-[8px] font-mono text-white/30 uppercase">Premium Account Required</p>
+            )}
+            <p className="text-[8px] font-mono text-white/10 tracking-widest uppercase">Direct_Spotify_SDK_Boot</p>
+          </div>
         </div>
       </div>
     );
@@ -235,7 +367,7 @@ const App: React.FC = () => {
           onClick={toggleSession}
           className="absolute -right-2 top-[35%] w-5 h-16 bg-gradient-to-r from-[#b87333] via-[#d2691e] to-[#8b4513] rounded-r-xl border-y border-r border-black/60 cursor-pointer hover:translate-x-0.5 transition-transform z-50 shadow-lg"
         >
-          <div className={`absolute left-1 right-1 h-6 bg-black/40 rounded-lg shadow-inner transition-all duration-300 ${isActive ? 'bottom-2' : 'top-2'}`} />
+          <div className={`absolute left-1 right-1 h-6 bg-black/40 rounded-lg shadow-inner transition-all duration-300 ${isPlaying ? 'bottom-2' : 'top-2'}`} />
         </div>
 
         {/* Device Screen Area - High Contrast Monochrome */}
@@ -263,7 +395,7 @@ const App: React.FC = () => {
             <Knob 
               label="SEEK" 
               value={playbackProgress} 
-              onChange={setPlaybackProgress}
+              onChange={handleScrub}
             />
             <Knob 
               label="PROGRAM" 
@@ -276,7 +408,7 @@ const App: React.FC = () => {
           <div className="flex justify-between items-center pt-2 px-2 border-t border-white/5">
             <div className="flex items-center gap-4">
                <div className="flex gap-1">
-                  <div className={`w-1 h-1 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : 'bg-white/5'}`} />
+                  <div className={`w-1 h-1 rounded-full ${isPlaying ? 'bg-green-500 animate-pulse' : 'bg-white/5'}`} />
                   <div className="w-1 h-1 bg-white/5 rounded-full" />
                   <div className="w-1 h-1 bg-white/5 rounded-full" />
                </div>
