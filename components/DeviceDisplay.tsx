@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Track } from '../types';
+import VinylPlayer from './VinylPlayer.tsx';
 
 interface DeviceDisplayProps {
   track: Track;
@@ -8,9 +9,11 @@ interface DeviceDisplayProps {
   timeStr: string;
   isActive: boolean;
   focusMode: string;
+  isPlaying: boolean;
+  onScrub: (newProgress: number) => void;
 }
 
-const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr, isActive, focusMode }) => {
+const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr, isActive, focusMode, isPlaying, onScrub }) => {
   return (
     <div className="relative w-full aspect-square bg-[#010101] rounded-[2.2rem] overflow-hidden flex flex-col p-8 select-none shadow-[inset_0_0_80px_rgba(0,0,0,1)]">
       {/* Heavy Pixel Grid */}
@@ -32,26 +35,20 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
           </div>
         </div>
 
-        {/* High-Contrast Dithered Album Art */}
-        <div className="relative self-center w-52 h-52 border-[0.5px] border-white/10 bg-[#050505] overflow-hidden">
-          <img 
-            src={track.albumArt} 
-            alt={track.title}
-            className="w-full h-full object-cover opacity-80 grayscale contrast-[1.8] brightness-[0.7] transition-all duration-700"
-            style={{ 
-                imageRendering: 'pixelated',
-                mixBlendMode: 'screen'
-            }}
+        {/* High-Contrast Interactive Vinyl Platter */}
+        <div className="relative self-center w-56 h-56 border-[0.5px] border-white/5 bg-[#050505] overflow-hidden flex items-center justify-center">
+          <VinylPlayer 
+            currentTrack={track}
+            progress={progress}
+            isPlaying={isPlaying}
+            onScrub={onScrub}
           />
-          {/* Depth Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
           
-          {/* Central Lettering Overlay - Reference Style */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-[10rem] font-pixel text-white/5 leading-none select-none">
-              {track.title.charAt(0).toLowerCase()}
-            </span>
-          </div>
+          {/* Depth Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-40 pointer-events-none" />
+          
+          {/* Subtle Dither Pattern Over Platter */}
+          <div className="absolute inset-0 opacity-10 pointer-events-none z-20 mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
         </div>
 
         {/* Footer Info */}

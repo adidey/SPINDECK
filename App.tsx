@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
-import { FocusMode, Track, SessionRecord } from './types';
-import { FOCUS_CONFIG, MOCK_TRACKS } from './constants';
-import DeviceDisplay from './components/DeviceDisplay';
-import Knob from './components/Knob';
-import HistoryPanel from './components/HistoryPanel';
+import { FocusMode, Track, SessionRecord } from './types.ts';
+import { FOCUS_CONFIG, MOCK_TRACKS } from './constants.tsx';
+import DeviceDisplay from './components/DeviceDisplay.tsx';
+import Knob from './components/Knob.tsx';
+import HistoryPanel from './components/HistoryPanel.tsx';
 
 const App: React.FC = () => {
   const [focusMode, setFocusMode] = useState<FocusMode>(FocusMode.LIGHT);
@@ -34,8 +34,8 @@ const App: React.FC = () => {
   }, [timeLeft]);
 
   const handleSyncPlaylist = async () => {
-    // If no URL or no API key, just boot the default library
-    const hasKey = process.env.API_KEY && process.env.API_KEY !== 'undefined' && process.env.API_KEY.length > 5;
+    const envKey = typeof process !== 'undefined' ? process.env?.API_KEY : undefined;
+    const hasKey = envKey && envKey !== 'undefined' && envKey.length > 5;
     
     if (!playlistUrl || !hasKey) {
       setIsSyncing(true);
@@ -52,7 +52,7 @@ const App: React.FC = () => {
     setAiStatus("SYNC_PROTOCOL_INIT");
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      const ai = new GoogleGenAI({ apiKey: envKey || '' });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Analyze this public Spotify playlist URL: ${playlistUrl}. Extract 5 distinct songs. If URL is invalid, pick 5 random vaporwave tracks. Return ONLY a JSON array of objects with keys: id, title, artist, albumArt (use a high-quality Unsplash music URL), durationMs (random 180000-300000), albumTitle, trackNumber.`,
@@ -115,7 +115,6 @@ const App: React.FC = () => {
     setTimeLeft(FOCUS_CONFIG[focusMode].duration);
   }, [focusMode, currentTrack.title]);
 
-  // Knob Handlers (Weight, Width, Slant)
   const handleSlantKnob = (val: number) => {
     let nextMode = FocusMode.LIGHT;
     if (val < 0.33) nextMode = FocusMode.BREAK;
@@ -124,6 +123,10 @@ const App: React.FC = () => {
       setFocusMode(nextMode);
       if (!isActive) setTimeLeft(FOCUS_CONFIG[nextMode].duration);
     }
+  };
+
+  const handleScrub = (newProgress: number) => {
+    setPlaybackProgress(newProgress);
   };
 
   useEffect(() => {
@@ -224,25 +227,27 @@ const App: React.FC = () => {
             timeStr={timeStr}
             isActive={isActive}
             focusMode={FOCUS_CONFIG[focusMode].label}
+            isPlaying={isPlaying}
+            onScrub={handleScrub}
           />
         </div>
 
         {/* Chassis Controls Area */}
         <div className="px-8 py-8 flex flex-col gap-10">
-          {/* Rotary Knobs Section - Exactly as requested */}
+          {/* Rotary Knobs Section */}
           <div className="flex justify-between items-center">
             <Knob 
-              label="Weight" 
+              label="VOLUME" 
               value={volume} 
               onChange={setVolume}
             />
             <Knob 
-              label="Width" 
+              label="SEEK" 
               value={playbackProgress} 
               onChange={setPlaybackProgress}
             />
             <Knob 
-              label="Slant" 
+              label="PROGRAM" 
               value={focusMode === FocusMode.DEEP ? 1.0 : focusMode === FocusMode.LIGHT ? 0.5 : 0.0} 
               onChange={handleSlantKnob}
             />
