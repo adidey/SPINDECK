@@ -5,10 +5,12 @@ import { FOCUS_CONFIG, MOCK_TRACKS } from './constants.tsx';
 import DeviceDisplay from './components/DeviceDisplay.tsx';
 import Knob from './components/Knob.tsx';
 import HistoryPanel from './components/HistoryPanel.tsx';
+import PlaylistLibrary from './components/PlaylistLibrary.tsx';
 
 /**
  * SPINDECK TYPE-01: OFFICIAL SPOTIFY MODULE
  * Client ID: 0070c4647977442595714935909b3d19
+ * Manufacturer: DEYSIGNS
  */
 
 const SPOTIFY_CLIENT_ID = '0070c4647977442595714935909b3d19';
@@ -38,6 +40,7 @@ const App: React.FC = () => {
   const [isActive, setIsActive] = useState(false);
   const [history, setHistory] = useState<SessionRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   
   const [tracks, setTracks] = useState<Track[]>(MOCK_TRACKS);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
@@ -63,7 +66,7 @@ const App: React.FC = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }, [timeLeft]);
 
-  // --- Spotify SDK Loader & Initialization ---
+  // --- Spotify SDK Loader ---
   useEffect(() => {
     if (!accessToken) return;
 
@@ -76,36 +79,18 @@ const App: React.FC = () => {
 
       player.addListener('ready', ({ device_id }: { device_id: string }) => {
         setDeviceId(device_id);
-        setAiStatus("READY_TO_BOOT");
-        
-        // Attempt to auto-transfer playback to this device
+        setAiStatus("DEVICE_SYNCED");
         fetch('https://api.spotify.com/v1/me/player', {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ device_ids: [device_id], play: false })
-        }).catch(err => console.warn("Auto-transfer failed, manual sync required"));
+        }).catch(() => {});
       });
-
-      player.addListener('not_ready', () => setAiStatus("DEVICE_GONE_OFFLINE"));
-      player.addListener('initialization_error', ({ message }: any) => {
-        setAiStatus("SDK_INIT_ERROR");
-        console.error(message);
-      });
-      player.addListener('authentication_error', () => {
-        localStorage.removeItem('spotify_access_token');
-        setAccessToken(null);
-        setAiStatus("AUTH_EXPIRED");
-      });
-      player.addListener('account_error', () => setAiStatus("PREMIUM_REQUIRED"));
 
       player.addListener('player_state_changed', (state: any) => {
         if (!state) return;
         setIsPlaying(!state.paused);
         setPlaybackProgress(state.position / state.duration);
-        
         const track = state.track_window.current_track;
         if (track) {
           const mappedTrack: Track = {
@@ -117,13 +102,11 @@ const App: React.FC = () => {
             albumTitle: track.album.name,
             trackNumber: 1
           };
-          
           setTracks(prev => {
             const exists = prev.find(t => t.id === mappedTrack.id);
             if (!exists) return [mappedTrack, ...prev];
             return prev;
           });
-          
           setTracks(current => {
             const idx = current.findIndex(t => t.id === mappedTrack.id);
             if (idx !== -1) setCurrentTrackIndex(idx);
@@ -146,50 +129,38 @@ const App: React.FC = () => {
       initializePlayer();
     }
 
-    return () => {
-      if (playerRef.current) playerRef.current.disconnect();
-    };
+    return () => { if (playerRef.current) playerRef.current.disconnect(); };
   }, [accessToken]);
 
-  useEffect(() => {
-    if (playerRef.current) playerRef.current.setVolume(volume);
-  }, [volume]);
+  useEffect(() => { if (playerRef.current) playerRef.current.setVolume(volume); }, [volume]);
 
-  // --- Spotify PKCE Authentication Flow ---
+  // --- Spotify Auth ---
   const handleSpotifyLogin = async () => {
     const redirectUri = window.location.origin + window.location.pathname;
     const codeVerifier = generateRandomString(128);
     const challengeBuffer = await sha256(codeVerifier);
     const codeChallenge = base64encode(challengeBuffer);
-
     localStorage.setItem('spotify_code_verifier', codeVerifier);
-
     const scope = 'user-read-playback-state user-modify-playback-state streaming playlist-read-private user-read-currently-playing user-read-private user-read-email';
     const authUrl = new URL("https://accounts.spotify.com/authorize");
-
-    const params = {
+    authUrl.search = new URLSearchParams({
       response_type: 'code',
       client_id: SPOTIFY_CLIENT_ID,
-      scope: scope,
+      scope,
       code_challenge_method: 'S256',
       code_challenge: codeChallenge,
       redirect_uri: redirectUri,
-    };
-
-    authUrl.search = new URLSearchParams(params).toString();
+    }).toString();
     window.location.href = authUrl.toString();
   };
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-
     if (code) {
       const exchangeToken = async () => {
-        setAiStatus("EXCHANGING_TOKENS");
         const codeVerifier = localStorage.getItem('spotify_code_verifier');
         const redirectUri = window.location.origin + window.location.pathname;
-
         try {
           const response = await fetch('https://accounts.spotify.com/api/token', {
             method: 'POST',
@@ -197,51 +168,38 @@ const App: React.FC = () => {
             body: new URLSearchParams({
               client_id: SPOTIFY_CLIENT_ID,
               grant_type: 'authorization_code',
-              code: code,
+              code,
               redirect_uri: redirectUri,
               code_verifier: codeVerifier || '',
             }),
           });
-
           const data = await response.json();
           if (data.access_token) {
             localStorage.setItem('spotify_access_token', data.access_token);
             setAccessToken(data.access_token);
             window.history.replaceState({}, document.title, window.location.pathname);
-            setAiStatus("AUTH_SUCCESS");
-          } else {
-            throw new Error(data.error_description || "Auth failure");
+            setAiStatus("READY");
           }
-        } catch (err) {
-          setAiStatus("HANDSHAKE_ERROR");
-          console.error(err);
-        }
+        } catch (err) { setAiStatus("AUTH_ERROR"); }
       };
       exchangeToken();
     }
   }, []);
 
-  const handleSyncPlaylist = async () => {
-    if (!accessToken) {
-      handleSpotifyLogin();
-      return;
-    }
-
+  const handleSyncPlaylist = async (url?: string) => {
+    const targetUrl = url || playlistUrl;
+    if (!accessToken) { handleSpotifyLogin(); return; }
     setIsSyncing(true);
-    setAiStatus("LOADING_PLAYLIST");
-
+    setAiStatus("SYNCHRONIZING");
     try {
-      const playlistIdMatch = playlistUrl.match(/playlist\/([a-zA-Z0-9]+)/);
+      const playlistIdMatch = targetUrl.match(/playlist\/([a-zA-Z0-9]+)/);
       const playlistId = playlistIdMatch ? playlistIdMatch[1] : null;
-      if (!playlistId) throw new Error("ID_NOT_FOUND");
-
+      if (!playlistId) throw new Error("ID_MISSING");
       const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
-
       if (!response.ok) throw new Error("API_ERROR");
       const data = await response.json();
-
       const mappedTracks: Track[] = data.tracks.items
         .filter((i: any) => i.track)
         .slice(0, 20)
@@ -254,64 +212,31 @@ const App: React.FC = () => {
           albumTitle: item.track.album.name,
           trackNumber: idx + 1
         }));
-
       setTracks(mappedTracks);
-      setAiStatus("BOOTING_HARDWARE");
-
-      // Force playback on our device
       if (deviceId) {
-        const playRes = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+        await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
           method: 'PUT',
-          headers: { 
-            'Authorization': `Bearer ${accessToken}`, 
-            'Content-Type': 'application/json' 
-          },
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ context_uri: `spotify:playlist:${playlistId}` })
         });
-        
-        if (!playRes.ok) {
-           const errData = await playRes.json();
-           if (errData.error?.reason === "PREMIUM_REQUIRED") {
-             setAiStatus("PREMIUM_REQUIRED");
-             throw new Error("PREMIUM_REQUIRED");
-           }
-        }
       }
-
-      setTimeout(() => setIsSpotifyConnected(true), 800);
-
-    } catch (err: any) {
-      if (err.message !== "PREMIUM_REQUIRED") {
-        setAiStatus("SYNC_FAILURE");
-      }
-    } finally {
-      setIsSyncing(false);
-    }
+      setIsSpotifyConnected(true);
+    } catch (err) { setAiStatus("BOOT_ERROR"); }
+    finally { setIsSyncing(false); setShowLibrary(false); }
   };
 
   const handleNextTrack = useCallback(async () => {
-    if (playerRef.current) {
-      await playerRef.current.nextTrack();
-    } else {
-      setCurrentTrackIndex(prev => (prev + 1) % tracks.length);
-      setPlaybackProgress(0);
-    }
-  }, [tracks.length]);
+    if (playerRef.current) await playerRef.current.nextTrack();
+  }, []);
 
   const toggleSession = async () => {
-    if (playerRef.current) {
-      await playerRef.current.togglePlay();
-    } else {
-      setIsActive(!isActive);
-      setIsPlaying(!isActive);
-    }
+    if (playerRef.current) await playerRef.current.togglePlay();
   };
 
   const handleSessionComplete = useCallback(() => {
     setIsActive(false);
     setIsPlaying(false);
     if (playerRef.current) playerRef.current.pause();
-    
     const newRecord: SessionRecord = {
       id: Math.random().toString(36).substr(2, 9),
       mode: focusMode,
@@ -334,15 +259,8 @@ const App: React.FC = () => {
   };
 
   const handleScrub = (newProgress: number) => {
-    if (playerRef.current) {
-      playerRef.current.seek(Math.floor(newProgress * currentTrack.durationMs));
-    }
+    if (playerRef.current) playerRef.current.seek(Math.floor(newProgress * currentTrack.durationMs));
     setPlaybackProgress(newProgress);
-  };
-
-  const resetAuth = () => {
-    localStorage.clear();
-    window.location.href = window.location.origin + window.location.pathname;
   };
 
   useEffect(() => {
@@ -350,10 +268,7 @@ const App: React.FC = () => {
     if (isActive && timeLeft > 0) {
       timer = window.setInterval(() => {
         setTimeLeft(prev => {
-          if (prev <= 1) {
-            handleSessionComplete();
-            return 0;
-          }
+          if (prev <= 1) { handleSessionComplete(); return 0; }
           return prev - 1;
         });
       }, 1000);
@@ -367,42 +282,37 @@ const App: React.FC = () => {
         <div className="w-full max-w-sm bg-[#121212] rounded-[2.5rem] p-10 text-center flex flex-col items-center chassis-shadow border border-white/5 relative overflow-hidden">
           {isSyncing && (
             <div className="absolute inset-0 z-50 bg-[#080808] flex flex-col items-center justify-center p-8">
-               <div className="w-full h-[1px] bg-white/5 mb-8">
-                  <div className="h-full bg-white/40 animate-[loading_1.5s_infinite_linear]" style={{width: '20%'}} />
-               </div>
+               <div className="w-full h-[1px] bg-white/5 mb-8"><div className="h-full bg-white/40 animate-[loading_1.5s_infinite_linear]" style={{width: '20%'}} /></div>
                <span className="text-[12px] font-pixel text-white/80 mb-2 tracking-[0.4em] uppercase">{aiStatus}</span>
             </div>
           )}
-          
           <div className="w-16 h-16 bg-[#080808] rounded-2xl border border-white/10 mb-8 flex items-center justify-center shadow-inner">
-            <div className={`w-3 h-3 rounded-full shadow-[0_0_12px_white] transition-colors duration-500 ${accessToken ? 'bg-green-500 shadow-green-500/50' : 'bg-white'}`} />
+            <div className={`w-3 h-3 rounded-full shadow-[0_0_12px_white] ${accessToken ? 'bg-green-500 shadow-green-500/50' : 'bg-white'}`} />
           </div>
           <h1 className="text-2xl font-black tracking-tighter text-white mb-2 uppercase">SPINDECK TYPE-01</h1>
-          <p className="text-[10px] font-mono text-white/20 tracking-widest mb-10 uppercase font-bold">STATUS: {aiStatus}</p>
-          
+          <p className="text-[10px] font-mono text-white/20 tracking-widest mb-10 uppercase font-bold">MANUFACTURER: DEYSIGNS</p>
           <input 
             type="text" 
             placeholder="SPOTIFY_PLAYLIST_URL"
             value={playlistUrl}
             onChange={(e) => setPlaylistUrl(e.target.value)}
-            className="w-full bg-[#0a0a0a] border border-white/5 p-4 rounded-xl text-[10px] font-mono text-white mb-6 focus:outline-none focus:border-white/20 transition-all text-center"
+            className="w-full bg-[#0a0a0a] border border-white/5 p-4 rounded-xl text-[10px] font-mono text-white mb-6 focus:outline-none focus:border-white/20 text-center"
           />
-
           <button 
-            onClick={handleSyncPlaylist}
+            onClick={() => handleSyncPlaylist()}
             disabled={isSyncing}
-            className="w-full py-4 bg-white text-black hover:bg-zinc-200 active:scale-95 transition-all font-black text-xs tracking-[0.2em] uppercase rounded-xl disabled:opacity-50"
+            className="w-full py-4 bg-white text-black hover:bg-zinc-200 active:scale-95 transition-all font-black text-xs tracking-[0.2em] uppercase rounded-xl"
           >
             {accessToken ? 'SYNC & BOOT' : 'CONNECT SPOTIFY'}
           </button>
-          
-          <div className="mt-8 flex flex-col gap-4">
-            {!accessToken ? (
-               <p className="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em]">PREMIUM ACCOUNT REQUIRED</p>
-            ) : (
-               <button onClick={resetAuth} className="text-[8px] font-mono text-white/20 hover:text-white uppercase tracking-[0.2em] underline">Reset Session</button>
-            )}
-            <p className="text-[7px] font-mono text-white/5 tracking-widest uppercase text-center max-w-[200px]">Ensure Redirect URI matches http://localhost:3000 in Spotify Dashboard</p>
+          <div className="mt-12 flex flex-col items-center gap-4">
+             <div className="w-24 h-8 bg-gradient-to-br from-zinc-400 via-zinc-200 to-zinc-500 rounded-full flex items-center justify-center shadow-lg border border-white/30">
+                <span className="text-[10px] font-black text-black/70 tracking-tighter">DEYSIGNS</span>
+             </div>
+             <div className="flex gap-4">
+                <a href="https://open.spotify.com/user/adidey?si=82ca83d694b04b31" target="_blank" className="text-[8px] font-mono text-white/20 hover:text-white uppercase tracking-widest">SPOTIFY</a>
+                <a href="https://www.behance.net/aditya_dey" target="_blank" className="text-[8px] font-mono text-white/20 hover:text-white uppercase tracking-widest">BEHANCE</a>
+             </div>
           </div>
         </div>
       </div>
@@ -412,25 +322,16 @@ const App: React.FC = () => {
   return (
     <div className="relative min-h-screen bg-[#050505] flex items-center justify-center overflow-hidden font-sans">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)] pointer-events-none" />
-      
       <div className="relative w-full max-w-[460px] bg-[#1a1a1e] rounded-[3.5rem] p-4 flex flex-col gap-4 chassis-shadow border border-white/5 group shadow-[0_40px_100px_rgba(0,0,0,1)]">
         
-        <div 
-          onClick={toggleSession}
-          className="absolute -right-2 top-[35%] w-5 h-16 bg-gradient-to-r from-[#b87333] via-[#d2691e] to-[#8b4513] rounded-r-xl border-y border-r border-black/60 cursor-pointer hover:translate-x-0.5 transition-transform z-50 shadow-lg"
-        >
+        <div onClick={toggleSession} className="absolute -right-2 top-[35%] w-5 h-16 bg-gradient-to-r from-[#b87333] via-[#d2691e] to-[#8b4513] rounded-r-xl border-y border-r border-black/60 cursor-pointer hover:translate-x-0.5 transition-transform z-50 shadow-lg">
           <div className={`absolute left-1 right-1 h-6 bg-black/40 rounded-lg shadow-inner transition-all duration-300 ${isPlaying ? 'bottom-2' : 'top-2'}`} />
         </div>
 
         <div className="p-2 bg-[#020202] rounded-[2.8rem] shadow-inner border border-white/5">
           <DeviceDisplay 
-            track={currentTrack} 
-            progress={playbackProgress} 
-            timeStr={timeStr}
-            isActive={isActive}
-            focusMode={FOCUS_CONFIG[focusMode].label}
-            isPlaying={isPlaying}
-            onScrub={handleScrub}
+            track={currentTrack} progress={playbackProgress} timeStr={timeStr} 
+            isActive={isActive} focusMode={FOCUS_CONFIG[focusMode].label} isPlaying={isPlaying} onScrub={handleScrub}
           />
         </div>
 
@@ -446,36 +347,48 @@ const App: React.FC = () => {
                <div className="flex gap-1">
                   <div className={`w-1 h-1 rounded-full ${isPlaying ? 'bg-green-500 animate-pulse' : 'bg-white/5'}`} />
                   <div className="w-1 h-1 bg-white/5 rounded-full" />
-                  <div className="w-1 h-1 bg-white/5 rounded-full" />
                </div>
-               <span className="text-[8px] font-mono text-white/20 tracking-widest uppercase">TYPE_01_SYS</span>
+               <span className="text-[8px] font-mono text-white/20 tracking-widest uppercase">SYST_ACTIVE</span>
             </div>
             <div className="flex items-center gap-6">
+               <button onClick={() => setShowLibrary(true)} className="text-white/20 hover:text-white transition-all p-2">
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>
+               </button>
                <button onClick={handleNextTrack} className="text-white/20 hover:text-white transition-all p-2">
                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
                </button>
                <button onClick={() => setShowHistory(true)} className="text-white/20 hover:text-white transition-all p-2">
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                </button>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-center gap-8 opacity-20 pb-6">
-           <div className="w-8 h-1 bg-black rounded-full" />
-           <div className="w-14 h-3 bg-black rounded-md border border-white/5 flex items-center justify-center p-1">
-              <div className="w-full h-[1px] bg-white/10" />
+        {/* Branding Badge & Socials */}
+        <div className="flex flex-col items-center gap-3 pb-8 opacity-80">
+           <div className="relative w-32 h-10 bg-gradient-to-br from-[#e0e0e0] via-[#f5f5f5] to-[#bdbdbd] rounded-full flex items-center justify-center shadow-[0_4px_10px_rgba(0,0,0,0.5),inset_0_1px_2px_rgba(255,255,255,0.8)] border border-white/20 overflow-hidden">
+              <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%] animate-[shimmer_5s_infinite_linear]" />
+              <div className="flex flex-col items-center leading-none">
+                 <span className="text-[12px] font-black text-black/80 tracking-tighter" style={{ fontFamily: 'Inter' }}>DEYSIGNS</span>
+                 <div className="w-12 h-[0.5px] bg-black/20 mt-0.5" />
+              </div>
            </div>
-           <div className="w-8 h-1 bg-black rounded-full" />
+           <div className="flex gap-6 mt-1">
+              <a href="https://open.spotify.com/user/adidey?si=82ca83d694b04b31" target="_blank" className="text-[8px] font-mono text-white/30 hover:text-white transition-colors uppercase tracking-[0.2em]">S_UNIT</a>
+              <a href="https://www.behance.net/aditya_dey" target="_blank" className="text-[8px] font-mono text-white/30 hover:text-white transition-colors uppercase tracking-[0.2em]">B_LOG</a>
+           </div>
         </div>
       </div>
 
-      {showHistory && (
-        <HistoryPanel 
-          history={history} 
-          onClose={() => setShowHistory(false)} 
-        />
-      )}
+      {showHistory && <HistoryPanel history={history} onClose={() => setShowHistory(false)} />}
+      {showLibrary && <PlaylistLibrary onSelect={handleSyncPlaylist} onClose={() => setShowLibrary(false)} />}
+
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+      `}</style>
     </div>
   );
 };

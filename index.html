@@ -14,6 +14,7 @@
         background-color: #080808;
         font-family: 'Inter', sans-serif;
         color: #FFFFFF;
+        user-select: none;
       }
       .font-pixel { font-family: 'VT323', monospace; }
       .font-mono { font-family: 'JetBrains Mono', monospace; }
@@ -50,9 +51,24 @@
         0% { transform: translateX(-100%); }
         100% { transform: translateX(400%); }
       }
+
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 3px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+      }
     </style>
     <script>
-      // Shim process.env for browser environment to prevent crashes
       window.process = window.process || { env: {} };
     </script>
     <script type="importmap">
@@ -65,7 +81,6 @@
       }
     }
     </script>
-    <!-- Explicitly load the entry point -->
     <script type="module" src="index.tsx"></script>
   </head>
   <body>
