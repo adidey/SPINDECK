@@ -4,10 +4,11 @@ import { SessionRecord } from '../types';
 
 interface HistoryPanelProps {
   history: SessionRecord[];
+  groundingLinks?: {title: string, uri: string}[];
   onClose: () => void;
 }
 
-const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onClose }) => {
+const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, groundingLinks = [], onClose }) => {
   return (
     <div className="fixed inset-y-0 right-0 w-80 bg-[#0a0a0a] border-l border-white/5 p-8 flex flex-col shadow-2xl z-[100] animate-in slide-in-from-right duration-300">
       <div className="flex justify-between items-center mb-10 pb-4 border-b border-white/5">
@@ -20,27 +21,53 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onClose }) => {
         </button>
       </div>
       
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-        {history.length === 0 ? (
-          <div className="text-center py-20 opacity-10 flex flex-col items-center">
-            <div className="w-8 h-8 border border-white mb-4 rounded-full" />
-            <p className="text-[10px] font-mono tracking-widest">NULL_DATA</p>
+      <div className="flex-1 overflow-y-auto space-y-8 pr-2 custom-scrollbar">
+        {/* Grounding Sources Section */}
+        {groundingLinks.length > 0 && (
+          <div className="flex flex-col gap-3">
+             <span className="text-[8px] font-mono text-white/40 uppercase tracking-widest font-bold">GROUNDING_SOURCES</span>
+             <div className="flex flex-col gap-2">
+                {groundingLinks.map((link, idx) => (
+                  <a 
+                    key={idx} 
+                    href={link.uri} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[9px] font-mono text-white/60 hover:text-white underline truncate block"
+                  >
+                    {link.title}
+                  </a>
+                ))}
+             </div>
           </div>
-        ) : (
-          history.map((session) => (
-            <div key={session.id} className="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-[8px] font-mono text-white/40 uppercase">
-                  {new Date(session.startTime).toLocaleDateString()}
-                </span>
-                <span className="text-[8px] font-mono text-white font-bold bg-white/10 px-1 rounded-sm">
-                  {Math.floor(session.durationSeconds / 60)}M
-                </span>
-              </div>
-              <h4 className="text-[10px] font-bold text-white uppercase tracking-widest">{session.mode}</h4>
-            </div>
-          ))
         )}
+
+        {/* Session History Section */}
+        <div className="flex flex-col gap-3">
+          <span className="text-[8px] font-mono text-white/40 uppercase tracking-widest font-bold">FOCUS_SESSIONS</span>
+          {history.length === 0 ? (
+            <div className="text-center py-10 opacity-10 flex flex-col items-center">
+              <div className="w-8 h-8 border border-white mb-4 rounded-full" />
+              <p className="text-[10px] font-mono tracking-widest">NULL_DATA</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {history.map((session) => (
+                <div key={session.id} className="bg-white/5 p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[8px] font-mono text-white/40 uppercase">
+                      {new Date(session.startTime).toLocaleDateString()}
+                    </span>
+                    <span className="text-[8px] font-mono text-white font-bold bg-white/10 px-1 rounded-sm">
+                      {Math.floor(session.durationSeconds / 60)}M
+                    </span>
+                  </div>
+                  <h4 className="text-[10px] font-bold text-white uppercase tracking-widest">{session.mode}</h4>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       
       <div className="mt-10 pt-6 border-t border-white/5">

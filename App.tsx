@@ -12,6 +12,7 @@ const App: React.FC = () => {
   const [isActive, setIsActive] = useState(false);
   const [history, setHistory] = useState<SessionRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [groundingLinks, setGroundingLinks] = useState<{title: string, uri: string}[]>([]);
   
   const [tracks, setTracks] = useState<Track[]>(MOCK_TRACKS);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
@@ -55,8 +56,9 @@ const App: React.FC = () => {
       const ai = new GoogleGenAI({ apiKey: envKey || '' });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Analyze this public Spotify playlist URL: ${playlistUrl}. Extract 5 distinct songs. If URL is invalid, pick 5 random vaporwave tracks. Return ONLY a JSON array of objects with keys: id, title, artist, albumArt (use a high-quality Unsplash music URL), durationMs (random 180000-300000), albumTitle, trackNumber.`,
+        contents: `Search for this Spotify playlist and identify its tracks: ${playlistUrl}. Extract 5 distinct songs from it. Return ONLY a JSON array of objects with keys: id, title, artist, albumArt (use a high-quality Unsplash music URL related to the track mood), durationMs (actual or random 180000-300000), albumTitle, trackNumber.`,
         config: {
+          tools: [{ googleSearch: {} }],
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.ARRAY,
@@ -77,14 +79,31 @@ const App: React.FC = () => {
         }
       });
 
+      // Extract Grounding Sources
+      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      if (chunks) {
+        const links = chunks
+          .filter(chunk => chunk.web)
+          .map(chunk => ({
+            title: chunk.web?.title || 'Source',
+            uri: chunk.web?.uri || '#'
+          }));
+        setGroundingLinks(links);
+      }
+
       const text = response.text;
       const newTracks = JSON.parse(text);
-      setTracks(newTracks);
-      setAiStatus("SYNC_COMPLETE");
+      if (Array.isArray(newTracks) && newTracks.length > 0) {
+        setTracks(newTracks);
+        setAiStatus("SYNC_COMPLETE");
+      } else {
+        throw new Error("Invalid track data");
+      }
       setTimeout(() => setIsSpotifyConnected(true), 1000);
     } catch (err) {
-      console.warn("AI Sync failed or no key, using default protocol.");
+      console.warn("AI Sync failed or no key, using default protocol.", err);
       setAiStatus("FALLBACK_TO_INTERNAL");
+      setTracks(MOCK_TRACKS);
       setTimeout(() => setIsSpotifyConnected(true), 1500);
     } finally {
       setIsSyncing(false);
@@ -284,7 +303,13 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {showHistory && <HistoryPanel history={history} onClose={() => setShowHistory(false)} />}
+      {showHistory && (
+        <HistoryPanel 
+          history={history} 
+          groundingLinks={groundingLinks}
+          onClose={() => setShowHistory(false)} 
+        />
+      )}
     </div>
   );
 };
