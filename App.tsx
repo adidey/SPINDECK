@@ -1,13 +1,15 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { GoogleGenAI, Type } from '@google/genai';
 import { FocusMode, Track, SessionRecord } from './types.ts';
 import { FOCUS_CONFIG, MOCK_TRACKS } from './constants.tsx';
 import DeviceDisplay from './components/DeviceDisplay.tsx';
 import Knob from './components/Knob.tsx';
 import HistoryPanel from './components/HistoryPanel.tsx';
 
-// Spotify PKCE Helpers
+/**
+ * SPOTIFY PKCE HELPERS
+ * Official secure flow for public/browser clients.
+ */
 const generateRandomString = (length: number) => {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const values = crypto.getRandomValues(new Uint8Array(length));
@@ -32,7 +34,6 @@ const App: React.FC = () => {
   const [isActive, setIsActive] = useState(false);
   const [history, setHistory] = useState<SessionRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [groundingLinks, setGroundingLinks] = useState<{title: string, uri: string}[]>([]);
   
   const [tracks, setTracks] = useState<Track[]>(MOCK_TRACKS);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
@@ -45,7 +46,7 @@ const App: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(FOCUS_CONFIG[focusMode].duration);
   const [aiStatus, setAiStatus] = useState("SYSTEM_IDLE");
 
-  // Spotify Web Playback State
+  // Spotify Connection State
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('spotify_access_token'));
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const playerRef = useRef<any>(null);
@@ -62,12 +63,14 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!accessToken) return;
 
-    const script = document.createElement("script");
-    script.src = "https://sdk.scdn.co/spotify-player.js";
-    script.async = true;
-    document.body.appendChild(script);
+    // Load SDK script if not already present
+    if (!(window as any).Spotify) {
+      const script = document.createElement("script");
+      script.src = "https://sdk.scdn.co/spotify-player.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
 
-    // FIX: Accessing window.onSpotifyWebPlaybackSDKReady and window.Spotify using type assertion to satisfy TypeScript
     (window as any).onSpotifyWebPlaybackSDKReady = () => {
       const player = new (window as any).Spotify.Player({
         name: 'SpinDeck Type-01',
@@ -76,37 +79,52 @@ const App: React.FC = () => {
       });
 
       player.addListener('ready', ({ device_id }: { device_id: string }) => {
-        console.log('Ready with Device ID', device_id);
+        console.log('SpinDeck Ready on Device ID:', device_id);
         setDeviceId(device_id);
         setAiStatus("DEVICE_READY");
       });
 
+      player.addListener('not_ready', ({ device_id }: { device_id: string }) => {
+        console.log('Device ID has gone offline', device_id);
+        setAiStatus("DEVICE_OFFLINE");
+      });
+
+      player.addListener('authentication_error', ({ message }: { message: string }) => {
+        console.error('Failed to authenticate:', message);
+        localStorage.removeItem('spotify_access_token');
+        setAccessToken(null);
+        setAiStatus("AUTH_EXPIRED");
+      });
+
       player.addListener('player_state_changed', (state: any) => {
         if (!state) return;
+        
         setIsPlaying(!state.paused);
         setPlaybackProgress(state.position / state.duration);
         
-        // Sync metadata if track changed externally
         const track = state.track_window.current_track;
         if (track) {
           const mappedTrack: Track = {
             id: track.id,
             title: track.name,
             artist: track.artists[0].name,
-            albumArt: track.album.images[0].url,
+            albumArt: track.album.images[0]?.url || '',
             durationMs: state.duration,
             albumTitle: track.album.name,
             trackNumber: 1
           };
-          // We don't want to overwrite the whole list usually, 
-          // but we ensure currentTrack reflects reality
+          
           setTracks(prev => {
             const exists = prev.find(t => t.id === mappedTrack.id);
             if (!exists) return [mappedTrack, ...prev];
             return prev;
           });
-          const idx = tracks.findIndex(t => t.id === mappedTrack.id);
-          if (idx !== -1) setCurrentTrackIndex(idx);
+          
+          setTracks(current => {
+            const idx = current.findIndex(t => t.id === mappedTrack.id);
+            if (idx !== -1) setCurrentTrackIndex(idx);
+            return current;
+          });
         }
       });
 
@@ -117,28 +135,25 @@ const App: React.FC = () => {
     return () => {
       if (playerRef.current) playerRef.current.disconnect();
     };
-  }, [accessToken, volume, tracks]);
+  }, [accessToken]);
 
+  // Dynamic Volume Control
   useEffect(() => {
     if (playerRef.current) playerRef.current.setVolume(volume);
   }, [volume]);
 
-  // --- Spotify Auth Flow (PKCE) ---
+  // --- Spotify Auth Flow ---
   const handleSpotifyLogin = async () => {
-    const clientId = process.env.SPOTIFY_CLIENT_ID;
-    if (!clientId) {
-      alert("SPOTIFY_CLIENT_ID missing in environment.");
-      return;
-    }
-
+    const clientId = process.env.SPOTIFY_CLIENT_ID || '0070c4647977442595714935909b3d19';
     const redirectUri = window.location.origin + window.location.pathname;
+    
     const codeVerifier = generateRandomString(128);
     const challengeBuffer = await sha256(codeVerifier);
     const codeChallenge = base64encode(challengeBuffer);
 
     localStorage.setItem('spotify_code_verifier', codeVerifier);
 
-    const scope = 'user-read-playback-state user-modify-playback-state streaming playlist-read-private';
+    const scope = 'user-read-playback-state user-modify-playback-state streaming playlist-read-private user-read-currently-playing';
     const authUrl = new URL("https://accounts.spotify.com/authorize");
 
     const params = {
@@ -162,27 +177,33 @@ const App: React.FC = () => {
       const exchangeToken = async () => {
         setAiStatus("EXCHANGING_TOKENS");
         const codeVerifier = localStorage.getItem('spotify_code_verifier');
-        const clientId = process.env.SPOTIFY_CLIENT_ID;
+        const clientId = process.env.SPOTIFY_CLIENT_ID || '0070c4647977442595714935909b3d19';
         const redirectUri = window.location.origin + window.location.pathname;
 
-        const response = await fetch('https://accounts.spotify.com/api/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: clientId || '',
-            grant_type: 'authorization_code',
-            code: code,
-            redirect_uri: redirectUri,
-            code_verifier: codeVerifier || '',
-          }),
-        });
+        try {
+          const response = await fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: clientId,
+              grant_type: 'authorization_code',
+              code: code,
+              redirect_uri: redirectUri,
+              code_verifier: codeVerifier || '',
+            }),
+          });
 
-        const data = await response.json();
-        if (data.access_token) {
-          localStorage.setItem('spotify_access_token', data.access_token);
-          setAccessToken(data.access_token);
-          window.history.replaceState({}, document.title, window.location.pathname);
-          setAiStatus("AUTHENTICATED");
+          const data = await response.json();
+          if (data.access_token) {
+            localStorage.setItem('spotify_access_token', data.access_token);
+            setAccessToken(data.access_token);
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setAiStatus("AUTHENTICATED");
+          }
+        } catch (err) {
+          console.error("Token exchange failed:", err);
+          setAiStatus("AUTH_FAILED");
         }
       };
       exchangeToken();
@@ -196,46 +217,56 @@ const App: React.FC = () => {
     }
 
     setIsSyncing(true);
-    setAiStatus("FETCHING_PLAYLIST");
+    setAiStatus("FETCHING_STREAM");
 
     try {
-      // Extract ID from URL
-      const playlistId = playlistUrl.split('playlist/')[1]?.split('?')[0];
-      if (!playlistId) throw new Error("Invalid Playlist URL");
+      // Extract Playlist ID from URL
+      const playlistIdMatch = playlistUrl.match(/playlist\/([a-zA-Z0-9]+)/);
+      const playlistId = playlistIdMatch ? playlistIdMatch[1] : null;
+      if (!playlistId) throw new Error("Invalid Spotify Playlist URL");
 
+      // Fetch Playlist Tracks from API
       const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
 
-      if (!response.ok) throw new Error("Spotify API Error");
+      if (!response.ok) throw new Error("Spotify API unreachable");
       const data = await response.json();
 
-      const newTracks: Track[] = data.tracks.items.slice(0, 10).map((item: any, idx: number) => ({
-        id: item.track.id,
-        title: item.track.name,
-        artist: item.track.artists[0].name,
-        albumArt: item.track.album.images[0].url,
-        durationMs: item.track.duration_ms,
-        albumTitle: item.track.album.name,
-        trackNumber: idx + 1
-      }));
+      const mappedTracks: Track[] = data.tracks.items
+        .filter((item: any) => item.track)
+        .slice(0, 20)
+        .map((item: any, idx: number) => ({
+          id: item.track.id,
+          title: item.track.name,
+          artist: item.track.artists[0].name,
+          albumArt: item.track.album.images[0]?.url || '',
+          durationMs: item.track.duration_ms,
+          albumTitle: item.track.album.name,
+          trackNumber: idx + 1
+        }));
 
-      setTracks(newTracks);
+      setTracks(mappedTracks);
       setAiStatus("SYNC_COMPLETE");
       setTimeout(() => setIsSpotifyConnected(true), 800);
 
-      // Start playback on our device
+      // Trigger playback on the Web SDK device
       if (deviceId) {
         await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
           method: 'PUT',
-          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ context_uri: `spotify:playlist:${playlistId}` })
+          headers: { 
+            'Authorization': `Bearer ${accessToken}`, 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify({ 
+            context_uri: `spotify:playlist:${playlistId}`
+          })
         });
       }
 
     } catch (err) {
-      console.error("Sync failed:", err);
-      setAiStatus("API_ERROR_FALLBACK");
+      console.error("Playlist sync failed:", err);
+      setAiStatus("HANDSHAKE_ERROR");
       setTracks(MOCK_TRACKS);
       setTimeout(() => setIsSpotifyConnected(true), 1500);
     } finally {
@@ -289,7 +320,7 @@ const App: React.FC = () => {
 
   const handleScrub = (newProgress: number) => {
     if (playerRef.current) {
-      const position = newProgress * currentTrack.durationMs;
+      const position = Math.floor(newProgress * currentTrack.durationMs);
       playerRef.current.seek(position);
     }
     setPlaybackProgress(newProgress);
@@ -347,7 +378,7 @@ const App: React.FC = () => {
           
           <div className="mt-8 flex flex-col gap-2">
             {!accessToken && (
-               <p className="text-[8px] font-mono text-white/30 uppercase">Premium Account Required</p>
+               <p className="text-[8px] font-mono text-white/30 uppercase tracking-widest">Premium Account Required</p>
             )}
             <p className="text-[8px] font-mono text-white/10 tracking-widest uppercase">Direct_Spotify_SDK_Boot</p>
           </div>
@@ -438,7 +469,6 @@ const App: React.FC = () => {
       {showHistory && (
         <HistoryPanel 
           history={history} 
-          groundingLinks={groundingLinks}
           onClose={() => setShowHistory(false)} 
         />
       )}
