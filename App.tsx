@@ -7,9 +7,13 @@ import Knob from './components/Knob.tsx';
 import HistoryPanel from './components/HistoryPanel.tsx';
 
 /**
- * SPOTIFY PKCE HELPERS
- * Official secure flow for public/browser clients.
+ * SPINDECK TYPE-01: OFFICIAL SPOTIFY MODULE
+ * Client ID: 0070c4647977442595714935909b3d19
  */
+
+const SPOTIFY_CLIENT_ID = '0070c4647977442595714935909b3d19';
+
+// PKCE Cryptography Helpers
 const generateRandomString = (length: number) => {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const values = crypto.getRandomValues(new Uint8Array(length));
@@ -41,12 +45,12 @@ const App: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [playlistUrl, setPlaylistUrl] = useState('');
+  const [playlistUrl, setPlaylistUrl] = useState('https://open.spotify.com/playlist/7umeyatM5nQqwZYNVKD8YT?si=30701122b57e4d35');
   const [volume, setVolume] = useState(0.7);
   const [timeLeft, setTimeLeft] = useState(FOCUS_CONFIG[focusMode].duration);
   const [aiStatus, setAiStatus] = useState("SYSTEM_IDLE");
 
-  // Spotify Connection State
+  // Spotify Playback State
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('spotify_access_token'));
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const playerRef = useRef<any>(null);
@@ -59,19 +63,11 @@ const App: React.FC = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }, [timeLeft]);
 
-  // --- Spotify SDK Integration ---
+  // --- Spotify SDK Loader & Initialization ---
   useEffect(() => {
     if (!accessToken) return;
 
-    // Load SDK script if not already present
-    if (!(window as any).Spotify) {
-      const script = document.createElement("script");
-      script.src = "https://sdk.scdn.co/spotify-player.js";
-      script.async = true;
-      document.body.appendChild(script);
-    }
-
-    (window as any).onSpotifyWebPlaybackSDKReady = () => {
+    const initializePlayer = () => {
       const player = new (window as any).Spotify.Player({
         name: 'SpinDeck Type-01',
         getOAuthToken: (cb: (token: string) => void) => { cb(accessToken); },
@@ -79,26 +75,34 @@ const App: React.FC = () => {
       });
 
       player.addListener('ready', ({ device_id }: { device_id: string }) => {
-        console.log('SpinDeck Ready on Device ID:', device_id);
         setDeviceId(device_id);
-        setAiStatus("DEVICE_READY");
+        setAiStatus("READY_TO_BOOT");
+        
+        // Attempt to auto-transfer playback to this device
+        fetch('https://api.spotify.com/v1/me/player', {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ device_ids: [device_id], play: false })
+        }).catch(err => console.warn("Auto-transfer failed, manual sync required"));
       });
 
-      player.addListener('not_ready', ({ device_id }: { device_id: string }) => {
-        console.log('Device ID has gone offline', device_id);
-        setAiStatus("DEVICE_OFFLINE");
+      player.addListener('not_ready', () => setAiStatus("DEVICE_GONE_OFFLINE"));
+      player.addListener('initialization_error', ({ message }: any) => {
+        setAiStatus("SDK_INIT_ERROR");
+        console.error(message);
       });
-
-      player.addListener('authentication_error', ({ message }: { message: string }) => {
-        console.error('Failed to authenticate:', message);
+      player.addListener('authentication_error', () => {
         localStorage.removeItem('spotify_access_token');
         setAccessToken(null);
         setAiStatus("AUTH_EXPIRED");
       });
+      player.addListener('account_error', () => setAiStatus("PREMIUM_REQUIRED"));
 
       player.addListener('player_state_changed', (state: any) => {
         if (!state) return;
-        
         setIsPlaying(!state.paused);
         setPlaybackProgress(state.position / state.duration);
         
@@ -106,8 +110,8 @@ const App: React.FC = () => {
         if (track) {
           const mappedTrack: Track = {
             id: track.id,
-            title: track.name,
-            artist: track.artists[0].name,
+            title: track.name.toUpperCase().replace(/\s/g, '_'),
+            artist: track.artists[0].name.toUpperCase().replace(/\s/g, '_'),
             albumArt: track.album.images[0]?.url || '',
             durationMs: state.duration,
             albumTitle: track.album.name,
@@ -132,33 +136,40 @@ const App: React.FC = () => {
       playerRef.current = player;
     };
 
+    if (!(window as any).Spotify) {
+      const script = document.createElement("script");
+      script.src = "https://sdk.scdn.co/spotify-player.js";
+      script.async = true;
+      document.body.appendChild(script);
+      (window as any).onSpotifyWebPlaybackSDKReady = initializePlayer;
+    } else {
+      initializePlayer();
+    }
+
     return () => {
       if (playerRef.current) playerRef.current.disconnect();
     };
   }, [accessToken]);
 
-  // Dynamic Volume Control
   useEffect(() => {
     if (playerRef.current) playerRef.current.setVolume(volume);
   }, [volume]);
 
-  // --- Spotify Auth Flow ---
+  // --- Spotify PKCE Authentication Flow ---
   const handleSpotifyLogin = async () => {
-    const clientId = process.env.SPOTIFY_CLIENT_ID || '0070c4647977442595714935909b3d19';
     const redirectUri = window.location.origin + window.location.pathname;
-    
     const codeVerifier = generateRandomString(128);
     const challengeBuffer = await sha256(codeVerifier);
     const codeChallenge = base64encode(challengeBuffer);
 
     localStorage.setItem('spotify_code_verifier', codeVerifier);
 
-    const scope = 'user-read-playback-state user-modify-playback-state streaming playlist-read-private user-read-currently-playing';
+    const scope = 'user-read-playback-state user-modify-playback-state streaming playlist-read-private user-read-currently-playing user-read-private user-read-email';
     const authUrl = new URL("https://accounts.spotify.com/authorize");
 
     const params = {
       response_type: 'code',
-      client_id: clientId,
+      client_id: SPOTIFY_CLIENT_ID,
       scope: scope,
       code_challenge_method: 'S256',
       code_challenge: codeChallenge,
@@ -177,7 +188,6 @@ const App: React.FC = () => {
       const exchangeToken = async () => {
         setAiStatus("EXCHANGING_TOKENS");
         const codeVerifier = localStorage.getItem('spotify_code_verifier');
-        const clientId = process.env.SPOTIFY_CLIENT_ID || '0070c4647977442595714935909b3d19';
         const redirectUri = window.location.origin + window.location.pathname;
 
         try {
@@ -185,7 +195,7 @@ const App: React.FC = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
-              client_id: clientId,
+              client_id: SPOTIFY_CLIENT_ID,
               grant_type: 'authorization_code',
               code: code,
               redirect_uri: redirectUri,
@@ -197,13 +207,14 @@ const App: React.FC = () => {
           if (data.access_token) {
             localStorage.setItem('spotify_access_token', data.access_token);
             setAccessToken(data.access_token);
-            // Clean URL
             window.history.replaceState({}, document.title, window.location.pathname);
-            setAiStatus("AUTHENTICATED");
+            setAiStatus("AUTH_SUCCESS");
+          } else {
+            throw new Error(data.error_description || "Auth failure");
           }
         } catch (err) {
-          console.error("Token exchange failed:", err);
-          setAiStatus("AUTH_FAILED");
+          setAiStatus("HANDSHAKE_ERROR");
+          console.error(err);
         }
       };
       exchangeToken();
@@ -217,29 +228,27 @@ const App: React.FC = () => {
     }
 
     setIsSyncing(true);
-    setAiStatus("FETCHING_STREAM");
+    setAiStatus("LOADING_PLAYLIST");
 
     try {
-      // Extract Playlist ID from URL
       const playlistIdMatch = playlistUrl.match(/playlist\/([a-zA-Z0-9]+)/);
       const playlistId = playlistIdMatch ? playlistIdMatch[1] : null;
-      if (!playlistId) throw new Error("Invalid Spotify Playlist URL");
+      if (!playlistId) throw new Error("ID_NOT_FOUND");
 
-      // Fetch Playlist Tracks from API
       const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
 
-      if (!response.ok) throw new Error("Spotify API unreachable");
+      if (!response.ok) throw new Error("API_ERROR");
       const data = await response.json();
 
       const mappedTracks: Track[] = data.tracks.items
-        .filter((item: any) => item.track)
+        .filter((i: any) => i.track)
         .slice(0, 20)
         .map((item: any, idx: number) => ({
           id: item.track.id,
-          title: item.track.name,
-          artist: item.track.artists[0].name,
+          title: item.track.name.toUpperCase().replace(/\s/g, '_'),
+          artist: item.track.artists[0].name.toUpperCase().replace(/\s/g, '_'),
           albumArt: item.track.album.images[0]?.url || '',
           durationMs: item.track.duration_ms,
           albumTitle: item.track.album.name,
@@ -247,28 +256,34 @@ const App: React.FC = () => {
         }));
 
       setTracks(mappedTracks);
-      setAiStatus("SYNC_COMPLETE");
-      setTimeout(() => setIsSpotifyConnected(true), 800);
+      setAiStatus("BOOTING_HARDWARE");
 
-      // Trigger playback on the Web SDK device
+      // Force playback on our device
       if (deviceId) {
-        await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+        const playRes = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
           method: 'PUT',
           headers: { 
             'Authorization': `Bearer ${accessToken}`, 
             'Content-Type': 'application/json' 
           },
-          body: JSON.stringify({ 
-            context_uri: `spotify:playlist:${playlistId}`
-          })
+          body: JSON.stringify({ context_uri: `spotify:playlist:${playlistId}` })
         });
+        
+        if (!playRes.ok) {
+           const errData = await playRes.json();
+           if (errData.error?.reason === "PREMIUM_REQUIRED") {
+             setAiStatus("PREMIUM_REQUIRED");
+             throw new Error("PREMIUM_REQUIRED");
+           }
+        }
       }
 
-    } catch (err) {
-      console.error("Playlist sync failed:", err);
-      setAiStatus("HANDSHAKE_ERROR");
-      setTracks(MOCK_TRACKS);
-      setTimeout(() => setIsSpotifyConnected(true), 1500);
+      setTimeout(() => setIsSpotifyConnected(true), 800);
+
+    } catch (err: any) {
+      if (err.message !== "PREMIUM_REQUIRED") {
+        setAiStatus("SYNC_FAILURE");
+      }
     } finally {
       setIsSyncing(false);
     }
@@ -320,10 +335,14 @@ const App: React.FC = () => {
 
   const handleScrub = (newProgress: number) => {
     if (playerRef.current) {
-      const position = Math.floor(newProgress * currentTrack.durationMs);
-      playerRef.current.seek(position);
+      playerRef.current.seek(Math.floor(newProgress * currentTrack.durationMs));
     }
     setPlaybackProgress(newProgress);
+  };
+
+  const resetAuth = () => {
+    localStorage.clear();
+    window.location.href = window.location.origin + window.location.pathname;
   };
 
   useEffect(() => {
@@ -356,31 +375,34 @@ const App: React.FC = () => {
           )}
           
           <div className="w-16 h-16 bg-[#080808] rounded-2xl border border-white/10 mb-8 flex items-center justify-center shadow-inner">
-            <div className="w-3 h-3 bg-white shadow-[0_0_12px_white] rounded-full" />
+            <div className={`w-3 h-3 rounded-full shadow-[0_0_12px_white] transition-colors duration-500 ${accessToken ? 'bg-green-500 shadow-green-500/50' : 'bg-white'}`} />
           </div>
           <h1 className="text-2xl font-black tracking-tighter text-white mb-2 uppercase">SPINDECK TYPE-01</h1>
-          <p className="text-[10px] font-mono text-white/20 tracking-widest mb-10 uppercase font-bold">Official_Spotify_Interface</p>
+          <p className="text-[10px] font-mono text-white/20 tracking-widest mb-10 uppercase font-bold">STATUS: {aiStatus}</p>
           
           <input 
             type="text" 
             placeholder="SPOTIFY_PLAYLIST_URL"
             value={playlistUrl}
             onChange={(e) => setPlaylistUrl(e.target.value)}
-            className="w-full bg-[#0a0a0a] border border-white/5 p-4 rounded-xl text-xs font-mono text-white mb-6 focus:outline-none focus:border-white/20 transition-all text-center placeholder:opacity-10"
+            className="w-full bg-[#0a0a0a] border border-white/5 p-4 rounded-xl text-[10px] font-mono text-white mb-6 focus:outline-none focus:border-white/20 transition-all text-center"
           />
 
           <button 
             onClick={handleSyncPlaylist}
-            className="w-full py-4 bg-white text-black hover:bg-zinc-200 active:scale-95 transition-all font-black text-xs tracking-[0.2em] uppercase rounded-xl"
+            disabled={isSyncing}
+            className="w-full py-4 bg-white text-black hover:bg-zinc-200 active:scale-95 transition-all font-black text-xs tracking-[0.2em] uppercase rounded-xl disabled:opacity-50"
           >
             {accessToken ? 'SYNC & BOOT' : 'CONNECT SPOTIFY'}
           </button>
           
-          <div className="mt-8 flex flex-col gap-2">
-            {!accessToken && (
-               <p className="text-[8px] font-mono text-white/30 uppercase tracking-widest">Premium Account Required</p>
+          <div className="mt-8 flex flex-col gap-4">
+            {!accessToken ? (
+               <p className="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em]">PREMIUM ACCOUNT REQUIRED</p>
+            ) : (
+               <button onClick={resetAuth} className="text-[8px] font-mono text-white/20 hover:text-white uppercase tracking-[0.2em] underline">Reset Session</button>
             )}
-            <p className="text-[8px] font-mono text-white/10 tracking-widest uppercase">Direct_Spotify_SDK_Boot</p>
+            <p className="text-[7px] font-mono text-white/5 tracking-widest uppercase text-center max-w-[200px]">Ensure Redirect URI matches http://localhost:3000 in Spotify Dashboard</p>
           </div>
         </div>
       </div>
@@ -393,7 +415,6 @@ const App: React.FC = () => {
       
       <div className="relative w-full max-w-[460px] bg-[#1a1a1e] rounded-[3.5rem] p-4 flex flex-col gap-4 chassis-shadow border border-white/5 group shadow-[0_40px_100px_rgba(0,0,0,1)]">
         
-        {/* Side Copper Play/Pause Switch */}
         <div 
           onClick={toggleSession}
           className="absolute -right-2 top-[35%] w-5 h-16 bg-gradient-to-r from-[#b87333] via-[#d2691e] to-[#8b4513] rounded-r-xl border-y border-r border-black/60 cursor-pointer hover:translate-x-0.5 transition-transform z-50 shadow-lg"
@@ -401,7 +422,6 @@ const App: React.FC = () => {
           <div className={`absolute left-1 right-1 h-6 bg-black/40 rounded-lg shadow-inner transition-all duration-300 ${isPlaying ? 'bottom-2' : 'top-2'}`} />
         </div>
 
-        {/* Device Screen Area - High Contrast Monochrome */}
         <div className="p-2 bg-[#020202] rounded-[2.8rem] shadow-inner border border-white/5">
           <DeviceDisplay 
             track={currentTrack} 
@@ -414,28 +434,13 @@ const App: React.FC = () => {
           />
         </div>
 
-        {/* Chassis Controls Area */}
         <div className="px-8 py-8 flex flex-col gap-10">
-          {/* Rotary Knobs Section */}
           <div className="flex justify-between items-center">
-            <Knob 
-              label="VOLUME" 
-              value={volume} 
-              onChange={setVolume}
-            />
-            <Knob 
-              label="SEEK" 
-              value={playbackProgress} 
-              onChange={handleScrub}
-            />
-            <Knob 
-              label="PROGRAM" 
-              value={focusMode === FocusMode.DEEP ? 1.0 : focusMode === FocusMode.LIGHT ? 0.5 : 0.0} 
-              onChange={handleSlantKnob}
-            />
+            <Knob label="VOLUME" value={volume} onChange={setVolume} />
+            <Knob label="SEEK" value={playbackProgress} onChange={handleScrub} />
+            <Knob label="PROGRAM" value={focusMode === FocusMode.DEEP ? 1.0 : focusMode === FocusMode.LIGHT ? 0.5 : 0.0} onChange={handleSlantKnob} />
           </div>
 
-          {/* Functional Navigation Bar */}
           <div className="flex justify-between items-center pt-2 px-2 border-t border-white/5">
             <div className="flex items-center gap-4">
                <div className="flex gap-1">
@@ -456,7 +461,6 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Port Detail at bottom */}
         <div className="flex justify-center gap-8 opacity-20 pb-6">
            <div className="w-8 h-1 bg-black rounded-full" />
            <div className="w-14 h-3 bg-black rounded-md border border-white/5 flex items-center justify-center p-1">
