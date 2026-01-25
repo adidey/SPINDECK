@@ -16,14 +16,41 @@
   position: relative;
   width: 480px;
   height: 920px;
-  background-color: #2e2e30;
+  background-color: #0d0d0f;
+  /* Darker near-black */
   border-radius: 3.5rem;
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 50px 100px rgba(0, 0, 0, 0.9),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  /* Machined edge highlight */
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+/* Sandblasted Grain Overlay */
+.chassis::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.15;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Vignette Effect */
+.chassis::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.4) 100%);
+  pointer-events: none;
+  z-index: 2;
 }
 
 .display-well {
@@ -37,10 +64,14 @@
 }
 
 .controls-well {
+  position: relative;
+  z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 2rem 2.5rem;
+  gap: 2.5rem;
+  /* Increased spacing */
+  padding: 3rem 2.5rem;
+  /* More breathing room */
   flex: 1;
   justify-content: space-between;
 }
@@ -49,8 +80,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 1rem;
-  gap: 1.5rem;
+  padding: 0 0.5rem;
+  gap: 2rem;
+  /* Increased gap between knobs */
 }
 
 .status-section {
@@ -140,24 +172,37 @@
 }
 
 .silver-badge {
-  width: 92%;
-  height: 82%;
+  width: 94%;
+  height: 84%;
   border-radius: 9999px;
-  background: linear-gradient(to bottom right, #888, #aaa, #666);
+  background: linear-gradient(135deg, #444 0%, #aaa 50%, #222 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.silver-badge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.2;
+  mix-blend-mode: multiply;
 }
 
 .badge-text {
+  position: relative;
+  z-index: 10;
   font-size: 15px;
-  font-weight: 900;
-  color: rgba(0, 0, 0, 0.8);
+  font-weight: 950;
+  color: rgba(0, 0, 0, 0.9);
   letter-spacing: -0.05em;
   text-transform: uppercase;
   font-style: italic;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .technical-footer {
@@ -220,6 +265,114 @@
   50% {
     opacity: 0.3;
   }
+}
+
+@keyframes flicker {
+  0% {
+    opacity: 0.95254;
+  }
+
+  5% {
+    opacity: 0.95671;
+  }
+
+  10% {
+    opacity: 0.95754;
+  }
+
+  15% {
+    opacity: 0.94123;
+  }
+
+  20% {
+    opacity: 0.95874;
+  }
+
+  25% {
+    opacity: 0.95454;
+  }
+
+  30% {
+    opacity: 0.95123;
+  }
+
+  35% {
+    opacity: 0.95678;
+  }
+
+  40% {
+    opacity: 0.95012;
+  }
+
+  45% {
+    opacity: 0.95987;
+  }
+
+  50% {
+    opacity: 0.95543;
+  }
+
+  55% {
+    opacity: 0.95234;
+  }
+
+  60% {
+    opacity: 0.95876;
+  }
+
+  65% {
+    opacity: 0.95345;
+  }
+
+  70% {
+    opacity: 0.95765;
+  }
+
+  75% {
+    opacity: 0.95123;
+  }
+
+  80% {
+    opacity: 0.95678;
+  }
+
+  85% {
+    opacity: 0.95987;
+  }
+
+  90% {
+    opacity: 0.95456;
+  }
+
+  95% {
+    opacity: 0.95123;
+  }
+
+  100% {
+    opacity: 0.95765;
+  }
+}
+
+@keyframes phosphor {
+  0% {
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.2), 0 0 4px rgba(255, 255, 255, 0.1);
+  }
+
+  50% {
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.3), 0 0 6px rgba(255, 255, 255, 0.2);
+  }
+
+  100% {
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.2), 0 0 4px rgba(255, 255, 255, 0.1);
+  }
+}
+
+.crt-flicker {
+  animation: flicker 0.1s infinite;
+}
+
+.phosphor-glow {
+  animation: phosphor 2s infinite ease-in-out;
 }
 
 .blink-active {

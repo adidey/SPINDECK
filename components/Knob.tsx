@@ -53,19 +53,23 @@ const Knob: React.FC<KnobProps> = ({ label, value, onChange }) => {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="relative w-20 h-20 bg-[#121212] rounded-full flex items-center justify-center cursor-ns-resize active:cursor-grabbing shadow-[0_15px_30px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.05)]"
+        className="relative w-20 h-20 bg-[#0d0d0f] rounded-full flex items-center justify-center cursor-ns-resize active:cursor-grabbing shadow-[0_20px_40px_rgba(0,0,0,0.9),inset_0_1px_1px_rgba(255,255,255,0.05)]"
         style={{ touchAction: 'none' }}
       >
+        {/* Sandblasted Texture Overlay */}
+        <div className="absolute inset-0 rounded-full opacity-10 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+
         {/* Deep Matte Base */}
-        <div className="absolute inset-1 rounded-full bg-gradient-to-br from-[#1a1a1a] to-[#080808] shadow-inner" />
+        <div className="absolute inset-1 rounded-full bg-gradient-to-br from-[#1a1a1a] to-[#050505] shadow-inner" />
 
         {/* Rotating Cylinder Body */}
         <div
-          className="relative w-[85%] h-[85%] rounded-full bg-[#111] shadow-[0_10px_20px_rgba(0,0,0,0.6)] flex items-center justify-center transition-transform duration-75 ease-out"
+          className="relative w-[85%] h-[85%] rounded-full bg-[#111] shadow-[0_12px_24px_rgba(0,0,0,0.7)] flex items-center justify-center transition-transform duration-75 ease-out"
           style={{ transform: `rotate(${rotation}deg)` }}
         >
           {/* Subtle Brushed Metal Texture Overlay */}
-          <div className="absolute inset-0 rounded-full opacity-10 bg-[conic-gradient(from_0deg,_#333,_#111,_#333,_#111,_#333)]" />
+          <div className="absolute inset-0 rounded-full opacity-15 bg-[conic-gradient(from_0deg,_#444,_#111,_#444,_#111,_#444)]" />
+          <div className="absolute inset-0 rounded-full opacity-5 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
 
           {/* Indicator Dot - Brass/Orange Glow */}
           <div className="absolute top-2 w-2 h-2 bg-[#ff8c00] rounded-full shadow-[0_0_12px_rgba(255,140,0,0.8)] border border-black/50" />
