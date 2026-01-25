@@ -7,14 +7,17 @@ export const useFocusTimer = (mode: FocusMode, onComplete: () => void) => {
   const [isActive, setIsActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(FOCUS_CONFIG[mode].duration);
 
+  // Reset timer when mode changes or when inactive
   useEffect(() => {
-    if (!isActive) setTimeLeft(FOCUS_CONFIG[mode].duration);
+    if (!isActive) {
+      setTimeLeft(FOCUS_CONFIG[mode].duration);
+    }
   }, [mode, isActive]);
 
   useEffect(() => {
-    let timer: number;
+    let timerId: number;
     if (isActive && timeLeft > 0) {
-      timer = window.setInterval(() => {
+      timerId = window.setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
             onComplete();
@@ -24,7 +27,7 @@ export const useFocusTimer = (mode: FocusMode, onComplete: () => void) => {
         });
       }, 1000);
     }
-    return () => clearInterval(timer);
+    return () => clearInterval(timerId);
   }, [isActive, timeLeft, onComplete]);
 
   const timeStr = useMemo(() => {

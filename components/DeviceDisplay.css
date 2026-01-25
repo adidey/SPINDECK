@@ -2,9 +2,9 @@
 .screen-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 1 / 1;
   background-color: #010101;
-  border-radius: 2.2rem 2.2rem 1.2rem 1.2rem;
+  border-radius: 2.2rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -18,11 +18,7 @@
   inset: 0;
   z-index: 30;
   pointer-events: none;
-  opacity: 0.2;
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 4px 4px;
+  opacity: 0.3;
 }
 
 .scanline-overlay {
@@ -30,9 +26,9 @@
   inset: 0;
   z-index: 40;
   pointer-events: none;
-  opacity: 0.1;
-  background: linear-gradient(rgba(255,255,255,0) 50%, rgba(0,0,0,0.5) 50%);
-  background-size: 100% 4px;
+  opacity: 0.2;
+  background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.4) 50%);
+  background-size: 100% 6px;
 }
 
 .screen-content {
@@ -54,10 +50,10 @@
 
 .prgm-label {
   font-family: 'VT323', monospace;
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.3em;
   font-weight: bold;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.3);
   text-transform: uppercase;
 }
 
@@ -78,7 +74,7 @@
 
 .active-dot.on {
   background-color: white;
-  box-shadow: 0 0 20px white;
+  box-shadow: 0 0 15px white;
 }
 
 .active-dot.off {
@@ -88,24 +84,19 @@
 .platter-area {
   position: relative;
   align-self: center;
-  width: 16rem;
-  height: 16rem;
+  width: 14rem;
+  height: 14rem;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.grid-bg {
-  position: absolute;
-  inset: 0;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  border-radius: 0.5rem;
+  border: 0.5px solid rgba(255, 255, 255, 0.05);
+  background-color: #050505;
 }
 
 .screen-footer {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .track-meta-row {
@@ -117,14 +108,13 @@
 .track-labels {
   display: flex;
   flex-direction: column;
-  max-width: 65%;
-  gap: 0.125rem;
+  max-width: 60%;
 }
 
 .title-display {
   font-family: 'VT323', monospace;
-  font-size: 1.125rem;
-  letter-spacing: 0.15em;
+  font-size: 14px;
+  letter-spacing: 0.2em;
   font-weight: bold;
   text-transform: uppercase;
   white-space: nowrap;
@@ -145,16 +135,15 @@
 
 .clock-display {
   font-family: 'VT323', monospace;
-  font-size: 3.8rem;
+  font-size: 3.125rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.05em;
   line-height: 1;
-  opacity: 0.9;
 }
 
 .progress-track {
   position: relative;
-  height: 2.5px;
+  height: 2px;
   width: 100%;
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 9999px;
@@ -166,7 +155,7 @@
   inset-y: 0;
   left: 0;
   background-color: white;
-  box-shadow: 0 0 12px white;
+  box-shadow: 0 0 10px white;
   transition: width 0.3s;
 }
 

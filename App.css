@@ -203,7 +203,6 @@
 .switch-nub-up { transform: translateY(-0.5rem); }
 .switch-nub-down { transform: translateY(0.5rem); }
 
-/* BOOT SCREEN */
 .boot-screen {
   min-height: 100vh;
   background-color: black;
@@ -243,8 +242,6 @@
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 9999px;
-  background-color: #1ed760;
-  box-shadow: 0 0 15px rgba(30, 215, 96, 0.8);
 }
 
 .boot-header h1 {

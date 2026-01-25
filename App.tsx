@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FocusMode, SessionRecord } from './types.ts';
 import { FOCUS_CONFIG } from './constants.tsx';
 import { useSpotify } from './hooks/useSpotify.ts';
@@ -15,8 +15,12 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<SessionRecord[]>(() => JSON.parse(localStorage.getItem('spinpod_history_v2') || '[]'));
   const [showHistory, setShowHistory] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
-  const [playlistUrl, setPlaylistUrl] = useState('');
+  const [playlistUrl, setPlaylistUrl] = useState('https://open.spotify.com/playlist/7umeyatM5nQqwZYNVKD8YT?si=30701122b57e4d35');
   const [volume, setVolume] = useState(0.7);
+  
+  const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const processingCode = useRef(false);
 
   const spotify = useSpotify();
 
@@ -39,39 +43,54 @@ const App: React.FC = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-    if (code) spotify.handleAuthCode(code);
-  }, [spotify.handleAuthCode]);
+    if (code && !processingCode.current) {
+      processingCode.current = true;
+      spotify.handleAuthCode(code);
+    }
+  }, [spotify]);
 
   const handleSync = async (url: string) => {
     const target = url || playlistUrl;
-    if (!spotify.accessToken) return spotify.login();
+    if (!spotify.accessToken) {
+      spotify.login();
+      return;
+    }
     
+    setIsSyncing(true);
     try {
       const id = target.match(/playlist\/([a-zA-Z0-9]+)/)?.[1];
-      if (!id) return;
-      
-      if (spotify.deviceId) {
+      if (id && spotify.deviceId) {
         await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${spotify.deviceId}`, {
           method: 'PUT',
           headers: { 'Authorization': `Bearer ${spotify.accessToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ context_uri: `spotify:playlist:${id}` })
         });
+        setIsSpotifyConnected(true);
+      } else if (!id) {
+        setIsSpotifyConnected(true);
       }
-    } catch (err) { console.error("Sync failed", err); }
-    setShowLibrary(false);
+    } catch (err) { 
+      console.error("Sync failed", err); 
+      setIsSpotifyConnected(true);
+    } finally {
+      setIsSyncing(false);
+      setShowLibrary(false);
+    }
   };
 
-  if (!spotify.accessToken) {
+  if (!isSpotifyConnected) {
     return (
       <div className="boot-screen">
         <div className="boot-card">
           <div className="boot-well">
-            <div className="boot-led" />
+            <div className={`boot-led ${spotify.accessToken ? 'bg-[#1ed760] shadow-[0_0_15px_rgba(30,215,96,0.8)]' : 'bg-white/5'}`} />
           </div>
+          
           <div className="boot-header text-center">
             <h1>SPINPOD</h1>
             <p>CORE_REV: 3.5.0</p>
           </div>
+
           <div className="w-full flex flex-col gap-6 px-4">
             <div className="boot-input-well">
               <input 
@@ -82,8 +101,15 @@ const App: React.FC = () => {
                 className="boot-input"
               />
             </div>
-            <button onClick={() => handleSync(playlistUrl)} className="boot-btn">SYNC & BOOT</button>
+            <button 
+              onClick={() => handleSync(playlistUrl)} 
+              disabled={isSyncing}
+              className="boot-btn"
+            >
+              {isSyncing ? 'SYNCING...' : spotify.accessToken ? 'SYNC & BOOT' : 'CONNECT SPOTIFY'}
+            </button>
           </div>
+
           <div className="branding-footer">
             <div className="boot-badge-recess">
               <div className="boot-badge-inner">

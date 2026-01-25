@@ -31,7 +31,7 @@ export const useSpotify = () => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const playerRef = useRef<any>(null);
 
-  const login = async () => {
+  const login = useCallback(async () => {
     const redirectUri = window.location.origin + window.location.pathname;
     const codeVerifier = generateRandomString(128);
     const challengeBuffer = await sha256(codeVerifier);
@@ -45,7 +45,7 @@ export const useSpotify = () => {
       code_challenge_method: 'S256', code_challenge: codeChallenge, redirect_uri: redirectUri,
     }).toString();
     window.location.href = authUrl.toString();
-  };
+  }, []);
 
   const handleAuthCode = useCallback(async (code: string) => {
     const codeVerifier = localStorage.getItem('spotify_code_verifier');
@@ -74,6 +74,8 @@ export const useSpotify = () => {
     if (!accessToken) return;
 
     const init = () => {
+      if (playerRef.current) return; // Prevent double init
+      
       const player = new (window as any).Spotify.Player({
         name: 'Spinpod',
         getOAuthToken: (cb: (token: string) => void) => { cb(accessToken); },
@@ -116,15 +118,22 @@ export const useSpotify = () => {
       init();
     }
 
-    return () => playerRef.current?.disconnect();
+    return () => {
+      if (playerRef.current) {
+        playerRef.current.disconnect();
+        playerRef.current = null;
+      }
+    };
   }, [accessToken]);
 
-  const toggle = () => playerRef.current?.togglePlay();
-  const next = () => playerRef.current?.nextTrack();
-  const seek = (p: number) => {
-    if (currentTrack) playerRef.current?.seek(Math.floor(p * currentTrack.durationMs));
-  };
-  const setVolume = (v: number) => playerRef.current?.setVolume(v);
+  const toggle = useCallback(() => playerRef.current?.togglePlay(), []);
+  const next = useCallback(() => playerRef.current?.nextTrack(), []);
+  const seek = useCallback((p: number) => {
+    if (playerRef.current && currentTrack) {
+      playerRef.current.seek(Math.floor(p * currentTrack.durationMs));
+    }
+  }, [currentTrack]);
+  const setVolume = useCallback((v: number) => playerRef.current?.setVolume(v), []);
 
   return { accessToken, deviceId, isPlaying, progress, currentTrack, login, handleAuthCode, toggle, next, seek, setVolume };
 };
