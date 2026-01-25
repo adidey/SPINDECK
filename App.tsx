@@ -153,6 +153,33 @@ const App: React.FC = () => {
     );
   }
 
+  const [localProgress, setLocalProgress] = useState<number | null>(null);
+
+  // Optimistic scrub handler
+  const handleScrub = useCallback((val: number) => {
+    setLocalProgress(val);
+    spotify.seek(val);
+  }, [spotify]);
+
+  // Reset local progress if we stop scrubbing (mock logic: timeout or just rely on spotify update catching up?)
+  // Actually, standard pattern is: onDragStart -> setLocal, onDragEnd -> clearLocal.
+  // But our components don't bubble drag start/end yet. 
+  // Simple fix: If spotify progress jumps to near local, we clear local.
+  // Or just rely on setLocal being called rapidly during drag.
+  // We'll reset localProgress when spotify.progress changes significantly from it? 
+  // Better: Just use localProgress if it's set, and clear it after a short debounce? 
+  // Let's rely on the components driving it.
+
+  // NOTE: Simple debounce to clear local progress
+  useEffect(() => {
+    if (localProgress !== null) {
+      const t = setTimeout(() => setLocalProgress(null), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [localProgress]);
+
+  const displayProgress = localProgress !== null ? localProgress : spotify.progress;
+
   return (
     <div className="app-root">
       <div className="chassis">
@@ -163,19 +190,19 @@ const App: React.FC = () => {
         <div className="display-well">
           <DeviceDisplay
             track={spotify.currentTrack || { title: 'READY', artist: 'SYSTEM', id: '0', albumArt: '', durationMs: 0, albumTitle: '', trackNumber: 0 }}
-            progress={spotify.progress}
+            progress={displayProgress}
             timeStr={timer.timeStr}
             isActive={timer.isActive}
             focusMode={FOCUS_CONFIG[focusMode].label}
             isPlaying={spotify.isPlaying}
-            onScrub={spotify.seek}
+            onScrub={handleScrub}
           />
         </div>
 
         <div className="controls-well">
           <div className="knob-row">
             <Knob label="VOLUME" value={volume} onChange={(v) => { setVolume(v); spotify.setVolume(v); }} />
-            <Knob label="SEEK" value={spotify.progress} onChange={spotify.seek} />
+            <Knob label="SEEK" value={displayProgress} onChange={handleScrub} />
             <Knob label="PROGRAM" value={focusMode === FocusMode.DEEP ? 1 : focusMode === FocusMode.LIGHT ? 0.5 : 0} onChange={(val) => {
               if (val < 0.33) setFocusMode(FocusMode.BREAK);
               else if (val > 0.66) setFocusMode(FocusMode.DEEP);

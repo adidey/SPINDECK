@@ -45,7 +45,7 @@ const Knob: React.FC<KnobProps> = ({ label, value, onChange }) => {
 
   return (
     <div className="flex flex-col items-center gap-5 group select-none">
-      <span className="text-[11px] font-black text-white/40 group-hover:text-white/60 transition-colors tracking-[0.25em] uppercase">
+      <span className="text-[10px] font-black text-[#888] group-hover:text-[#ff9d00] transition-colors tracking-[0.2em] uppercase">
         {label}
       </span>
       <div
@@ -53,22 +53,22 @@ const Knob: React.FC<KnobProps> = ({ label, value, onChange }) => {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="relative w-24 h-24 bg-[#0a0a0a] rounded-full flex items-center justify-center cursor-ns-resize active:cursor-grabbing shadow-[0_15px_35px_rgba(0,0,0,0.9),inset_0_1px_2px_rgba(255,255,255,0.02)]"
+        className="relative w-24 h-24 bg-[#1a1a1a] rounded-full flex items-center justify-center cursor-ns-resize active:cursor-grabbing shadow-[0_10px_25px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)]"
         style={{ touchAction: 'none' }}
       >
         {/* Recessed Well */}
-        <div className="absolute inset-[3px] rounded-full bg-gradient-to-br from-black to-[#111] shadow-[inset_0_2px_6px_rgba(0,0,0,1)]" />
+        <div className="absolute inset-[4px] rounded-full bg-[#111] shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]" />
 
         {/* Main Dial Body */}
         <div
-          className="relative w-[82%] h-[82%] rounded-full bg-[#111] shadow-[0_8px_16px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.05)] flex items-center justify-center transition-transform duration-75 ease-out"
+          className="relative w-[78%] h-[78%] rounded-full bg-gradient-to-b from-[#2a2a2a] to-[#222] shadow-[0_4px_8px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.05)] flex items-center justify-center transition-transform duration-75 ease-out"
           style={{ transform: `rotate(${rotation}deg)` }}
         >
           {/* Subtle Texture */}
-          <div className="absolute inset-0 rounded-full opacity-5 bg-[conic-gradient(from_0deg,_#444,_#111,_#444,_#111,_#444)]" />
+          <div className="absolute inset-0 rounded-full opacity-5 bg-[conic-gradient(from_0deg,_#333,_#222,_#333,_#222,_#333)]" />
 
           {/* Glowing Indicator Dot */}
-          <div className="absolute top-2 w-2.5 h-2.5 bg-[#ff8c00] rounded-full shadow-[0_0_15px_rgba(255,140,0,0.9)] border border-black/40" />
+          <div className="absolute top-2 w-2 h-2 bg-[#ff9d00] rounded-full shadow-[0_0_8px_rgba(255,157,0,0.8)]" />
         </div>
 
         {/* Inner Circumference Ring */}
