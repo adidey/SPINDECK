@@ -8,7 +8,7 @@ import HistoryPanel from './components/HistoryPanel.tsx';
 import PlaylistLibrary from './components/PlaylistLibrary.tsx';
 
 /**
- * SPINDECK TYPE-01: OFFICIAL SPOTIFY MODULE
+ * SPINPOD: OFFICIAL SPOTIFY MODULE
  * Client ID: 0070c4647977442595714935909b3d19
  * Manufacturer: DEYSIGNS
  */
@@ -38,7 +38,7 @@ const App: React.FC = () => {
   const [focusMode, setFocusMode] = useState<FocusMode>(FocusMode.LIGHT);
   const [isActive, setIsActive] = useState(false);
   const [history, setHistory] = useState<SessionRecord[]>(() => {
-    const saved = localStorage.getItem('spindeck_history_v2');
+    const saved = localStorage.getItem('spinpod_history_v2');
     return saved ? JSON.parse(saved) : [];
   });
   const [showHistory, setShowHistory] = useState(false);
@@ -69,7 +69,7 @@ const App: React.FC = () => {
 
   // Persist history immediately on change
   useEffect(() => {
-    localStorage.setItem('spindeck_history_v2', JSON.stringify(history));
+    localStorage.setItem('spinpod_history_v2', JSON.stringify(history));
   }, [history]);
 
   // Handle Focus Timer - only runs if active AND music is playing
@@ -110,7 +110,7 @@ const App: React.FC = () => {
 
     const initializePlayer = () => {
       const player = new (window as any).Spotify.Player({
-        name: 'SpinDeck Type-01',
+        name: 'Spinpod',
         getOAuthToken: (cb: (token: string) => void) => { cb(accessToken); },
         volume: volume
       });
@@ -258,14 +258,14 @@ const App: React.FC = () => {
     if (playerRef.current) await playerRef.current.nextTrack();
   }, []);
 
-  const toggleSession = async () => {
+  const toggleSession = useCallback(async () => {
     if (!isActive) {
       setIsActive(true);
       if (playerRef.current && !isPlaying) await playerRef.current.resume();
     } else {
       if (playerRef.current) await playerRef.current.togglePlay();
     }
-  };
+  }, [isActive, isPlaying]);
 
   const handleSlantKnob = (val: number) => {
     let nextMode = FocusMode.LIGHT;
@@ -282,6 +282,18 @@ const App: React.FC = () => {
     setPlaybackProgress(newProgress);
   };
 
+  // Space bar functionality
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleSession();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleSession]);
+
   if (!isSpotifyConnected) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#080808] p-8">
@@ -295,7 +307,7 @@ const App: React.FC = () => {
           <div className="w-16 h-16 bg-[#080808] rounded-2xl border border-white/10 mb-8 flex items-center justify-center shadow-inner">
             <div className={`w-3 h-3 rounded-full shadow-[0_0_12px_white] ${accessToken ? 'bg-green-500 shadow-green-500/50' : 'bg-white'}`} />
           </div>
-          <h1 className="text-2xl font-black tracking-tighter text-white mb-2 uppercase">SPINDECK TYPE-01</h1>
+          <h1 className="text-2xl font-black tracking-tighter text-white mb-2 uppercase">SPINPOD</h1>
           <p className="text-[10px] font-mono text-white/20 tracking-widest mb-10 uppercase font-bold">CORE_REV: 3.5.0</p>
           <input 
             type="text" 
@@ -345,9 +357,9 @@ const App: React.FC = () => {
 
         <div className="px-8 py-8 flex flex-col gap-10">
           <div className="flex justify-between items-center">
-            <Knob label="WEIGHT" value={volume} onChange={setVolume} />
-            <Knob label="WIDTH" value={playbackProgress} onChange={handleScrub} />
-            <Knob label="SLANT" value={focusMode === FocusMode.DEEP ? 1.0 : focusMode === FocusMode.LIGHT ? 0.5 : 0.0} onChange={handleSlantKnob} />
+            <Knob label="VOLUME" value={volume} onChange={setVolume} />
+            <Knob label="SEEK" value={playbackProgress} onChange={handleScrub} />
+            <Knob label="PROGRAM" value={focusMode === FocusMode.DEEP ? 1.0 : focusMode === FocusMode.LIGHT ? 0.5 : 0.0} onChange={handleSlantKnob} />
           </div>
 
           <div className="flex justify-between items-center pt-2 px-2 border-t border-white/5">
@@ -356,7 +368,7 @@ const App: React.FC = () => {
                   <div className={`w-1 h-1 rounded-full ${isActive ? 'bg-red-500 shadow-[0_0_8px_red]' : 'bg-white/5'}`} />
                   <div className={`w-1 h-1 rounded-full ${isPlaying ? 'bg-green-500 animate-pulse' : 'bg-white/5'}`} />
                </div>
-               <span className="text-[8px] font-mono text-white/20 tracking-widest uppercase">ST_PRGM_LOAD</span>
+               <span className="text-[8px] font-mono text-white/20 tracking-widest uppercase">SYST_ACTIVE</span>
             </div>
             <div className="flex items-center gap-6">
                <button onClick={() => setShowLibrary(true)} className="text-white/20 hover:text-white transition-all p-2">

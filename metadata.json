@@ -1,5 +1,5 @@
 {
-  "name": "SpinDeck Industrial",
+  "name": "Spinpod Industrial",
   "description": "A minimalist, industrial-style focus companion inspired by Dieter Rams and mid-century audio equipment. High-precision tactile controls for deep work.",
   "requestFramePermissions": [
     "microphone"

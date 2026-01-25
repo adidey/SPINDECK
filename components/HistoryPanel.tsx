@@ -70,7 +70,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onClose }) => {
       
       <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-2 opacity-10">
           <span className="text-[8px] font-mono text-white tracking-[0.4em] uppercase">DEYSIGNS_CORE_ENGINE</span>
-          <span className="text-[7px] font-mono text-white tracking-widest uppercase">REV_3.5_STABLE</span>
+          <span className="text-[7px] font-mono text-white tracking-widest uppercase">SPINPOD_REV_3.5_STABLE</span>
       </div>
     </div>
   );

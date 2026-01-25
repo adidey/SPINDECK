@@ -1,6 +1,7 @@
-# 🎚️ SpinDeck: Type-01 Module
 
-SpinDeck is a minimalist, industrial-style focus companion inspired by mid-century audio equipment and the design principles of Dieter Rams. It combines high-precision tactile aesthetics with modern "Neural Sync" technology to create a distraction-free environment for deep work.
+# 🎚️ Spinpod
+
+Spinpod is a minimalist, industrial-style focus companion inspired by mid-century audio equipment and the design principles of Dieter Rams. It combines high-precision tactile aesthetics with modern "Neural Sync" technology to create a distraction-free environment for deep work.
 
 ## 🧠 Core Features
 
@@ -33,7 +34,7 @@ To enable the **Neural Sync** feature, you must provide a Google Gemini API Key.
 The app includes a "Factory Default" protocol. If no API Key is detected, the device will automatically boot from its internal local library (`MOCK_TRACKS`), allowing for full offline functionality.
 
 ## 🎨 Design Philosophy
-The "Type-01" module is designed to be felt as much as seen. The knobs utilize pointer-capture gestures to simulate high-torque rotary resistance, and the copper "Physical Switch" on the side provides a tactile start/stop mechanism.
+The Spinpod is designed to be felt as much as seen. The knobs utilize pointer-capture gestures to simulate high-torque rotary resistance, and the copper "Physical Switch" on the side provides a tactile start/stop mechanism.
 
 ---
-*Built for the digital minimalist.*
+*Built for the digital minimalist by DEYSIGNS.*
