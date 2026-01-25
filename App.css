@@ -1,0 +1,345 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.app-root {
+  min-height: 100vh;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.chassis {
+  position: relative;
+  width: 440px;
+  height: 780px;
+  background-color: #1a1a1e;
+  border-radius: 3.5rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 50px 100px rgba(0,0,0,1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.display-well {
+  padding: 0.375rem;
+  background-color: #020202;
+  border-radius: 2.8rem;
+  box-shadow: inset 0 4px 12px rgba(0,0,0,1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.controls-well {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  padding: 2rem;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.knob-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0.5rem;
+}
+
+.status-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.status-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1rem;
+}
+
+.indicator-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.led-cluster {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.led {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.led-active {
+  background-color: #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+}
+
+.syst-label {
+  font-size: 10px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.transport-btns {
+  display: flex;
+  gap: 2.5rem;
+  opacity: 0.3;
+}
+
+.transport-icon {
+  color: white;
+  transition: opacity 0.2s;
+}
+
+.transport-icon:hover {
+  opacity: 1;
+}
+
+.branding-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  padding-bottom: 1rem;
+}
+
+.badge-recess {
+  width: 10rem;
+  height: 3.5rem;
+  background-color: #121212;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.silver-badge {
+  width: 92%;
+  height: 82%;
+  border-radius: 9999px;
+  background: linear-gradient(to bottom right, #888, #aaa, #666);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.badge-text {
+  font-size: 15px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.8);
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  font-style: italic;
+}
+
+.technical-footer {
+  display: flex;
+  gap: 3rem;
+  opacity: 0.2;
+}
+
+.footer-link {
+  font-size: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  color: white;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+}
+
+.side-switch {
+  position: absolute;
+  right: -0.5rem;
+  top: 35%;
+  width: 1.25rem;
+  height: 4rem;
+  background-color: #d2691e;
+  border-radius: 0 0.75rem 0.75rem 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.6);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+  border-right: 1px solid rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.switch-nub {
+  width: 0.75rem;
+  height: 2.5rem;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 9999px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease;
+}
+
+.switch-nub-up { transform: translateY(-0.5rem); }
+.switch-nub-down { transform: translateY(0.5rem); }
+
+/* BOOT SCREEN */
+.boot-screen {
+  min-height: 100vh;
+  background-color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.boot-card {
+  width: 440px;
+  height: 640px;
+  background-color: #121212;
+  border-radius: 3.5rem;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 40px 100px rgba(0,0,0,1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.boot-well {
+  width: 5rem;
+  height: 5rem;
+  background-color: #0a0a0a;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 4px 12px rgba(0,0,0,0.8);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.boot-led {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 9999px;
+  background-color: #1ed760;
+  box-shadow: 0 0 15px rgba(30, 215, 96, 0.8);
+}
+
+.boot-header h1 {
+  font-size: 2.25rem;
+  font-weight: 900;
+  color: white;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.boot-header p {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.2em;
+  text-align: center;
+}
+
+.boot-input-well {
+  width: 100%;
+  background-color: #080808;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 1.25rem;
+  border-radius: 1.5rem;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.boot-input {
+  width: 100%;
+  background: transparent;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  outline: none;
+}
+
+.boot-btn {
+  width: 100%;
+  padding: 1.25rem;
+  background-color: white;
+  color: black;
+  font-weight: 900;
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  border-radius: 1.5rem;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.boot-btn:hover { background-color: #e5e7eb; }
+.boot-btn:active { transform: scale(0.95); }
+
+.boot-badge-recess {
+  width: 8rem;
+  height: 3rem;
+  background-color: #1a1a1e;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.boot-badge-inner {
+  width: 92%;
+  height: 82%;
+  border-radius: 9999px;
+  background: linear-gradient(to bottom right, #444, #666, #333);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.4;
+}
+
+.boot-badge-inner span {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.8);
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  font-style: italic;
+}
+
+.boot-technical-labels {
+  display: flex;
+  gap: 1rem;
+  opacity: 0.2;
+}
+
+.boot-technical-labels span {
+  font-size: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  color: white;
+  letter-spacing: 0.4em;
+}
