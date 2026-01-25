@@ -17,7 +17,7 @@ const PlaylistLibrary: React.FC<PlaylistLibraryProps> = ({ onSelect, onClose }) 
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl panel-slide-in">
+    <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
       <div className="w-full max-w-sm bg-[#121212] border border-white/10 rounded-[3rem] p-10 chassis-shadow flex flex-col gap-12">
         <div className="flex justify-between items-center">
           <div className="flex flex-col">

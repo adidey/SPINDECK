@@ -156,8 +156,8 @@ const App: React.FC = () => {
   return (
     <div className="app-root">
       <div className="chassis">
-        <div onClick={() => timer.setIsActive(!timer.isActive)} className="side-switch">
-          <div className={`switch-nub ${timer.isActive ? 'switch-nub-down' : 'switch-nub-up'}`} />
+        <div onClick={spotify.toggle} className="side-switch">
+          <div className={`switch-nub ${spotify.isPlaying ? 'switch-nub-down' : 'switch-nub-up'}`} />
         </div>
 
         <div className="display-well">
@@ -206,8 +206,8 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="technical-footer">
-                <span className="footer-link">ADIDEY_UNIT</span>
-                <span className="footer-link">RECORDS_MNG</span>
+                <span className="footer-link cursor-pointer hover:text-white transition-colors" onClick={() => window.open('https://github.com/adidey', '_blank')}>ADIDEY_UNIT</span>
+                <span className="footer-link cursor-pointer hover:text-white transition-colors" onClick={() => window.open('https://deysigns.com', '_blank')}>RECORDS_MNG</span>
               </div>
             </div>
           </div>
