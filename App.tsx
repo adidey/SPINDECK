@@ -41,6 +41,22 @@ const App: React.FC = () => {
   useEffect(() => localStorage.setItem('spinpod_history_v2', JSON.stringify(history)), [history]);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        // Ignore if user is typing in an input text field
+        if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+          return;
+        }
+        e.preventDefault(); // Prevent scrolling
+        spotify.toggle();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [spotify]);
+
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     if (code && !processingCode.current) {
@@ -60,18 +76,26 @@ const App: React.FC = () => {
     try {
       const id = target.match(/playlist\/([a-zA-Z0-9]+)/)?.[1];
       if (id && spotify.deviceId) {
+        // Ensure volume is up before playing
+        await spotify.setVolume(1.0);
+
         await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${spotify.deviceId}`, {
           method: 'PUT',
           headers: { 'Authorization': `Bearer ${spotify.accessToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ context_uri: `spotify:playlist:${id}` })
+        }).then(async res => {
+          if (!res.ok) {
+            throw new Error(`PLAYBACK_ERROR_${res.status}`);
+          }
         });
         setIsSpotifyConnected(true);
       } else if (!id) {
         setIsSpotifyConnected(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Sync failed", err);
-      setIsSpotifyConnected(true);
+      // Alert user but stay on boot screen
+      alert(`SYNC FAILED: ${err.message || 'UNKNOWN_ERROR'}. TRY OPENING SPOTIFY ON ANOTHER DEVICE IF THIS PERSISTS.`);
     } finally {
       setIsSyncing(false);
       setShowLibrary(false);

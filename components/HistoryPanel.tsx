@@ -16,7 +16,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onClose }) => {
   }, [history]);
 
   return (
-    <div className="fixed inset-y-0 right-0 w-80 bg-[#0a0a0a] border-l border-white/5 p-8 flex flex-col shadow-2xl z-[100] animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-y-0 right-0 w-80 bg-[#0a0a0a] border-l border-white/5 p-8 flex flex-col shadow-2xl z-[100] panel-slide-in">
       <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/5">
         <div className="flex flex-col">
           <h3 className="text-sm font-black text-white uppercase tracking-tighter">FOCUS_MANIFEST</h3>
@@ -29,13 +29,13 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onClose }) => {
 
       {/* Daily Summary Stats */}
       <div className="mb-8 p-4 bg-[#111] rounded-xl border border-white/5 flex flex-col gap-2">
-         <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">DAILY_PROTOCOL_TOTAL</span>
-         <div className="flex items-end gap-2">
-            <span className="text-3xl font-pixel text-white leading-none">{Math.floor(dailyTotalMinutes)}</span>
-            <span className="text-[10px] font-mono text-white/20 uppercase mb-1">Minutes_Synced</span>
-         </div>
+        <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">DAILY_PROTOCOL_TOTAL</span>
+        <div className="flex items-end gap-2">
+          <span className="text-3xl font-pixel text-white leading-none">{Math.floor(dailyTotalMinutes)}</span>
+          <span className="text-[10px] font-mono text-white/20 uppercase mb-1">Minutes_Synced</span>
+        </div>
       </div>
-      
+
       <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
         {history.length === 0 ? (
           <div className="text-center py-20 opacity-10 flex flex-col items-center">
@@ -52,7 +52,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onClose }) => {
                     {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                   <span className="text-[7px] font-mono text-white/20 uppercase">
-                    MOD_{session.id.slice(0,4)}
+                    MOD_{session.id.slice(0, 4)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -60,17 +60,17 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onClose }) => {
                   <span className="text-[10px] font-pixel text-white/40">{Math.floor(session.durationSeconds / 60)}:00</span>
                 </div>
                 <div className="mt-2 text-[8px] font-mono text-white/20 uppercase truncate italic">
-                   {session.tracks[0] || 'DATA_MISSING'}
+                  {session.tracks[0] || 'DATA_MISSING'}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
-      
+
       <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-2 opacity-10">
-          <span className="text-[8px] font-mono text-white tracking-[0.4em] uppercase">DEYSIGNS_CORE_ENGINE</span>
-          <span className="text-[7px] font-mono text-white tracking-widest uppercase">SPINPOD_REV_3.5_STABLE</span>
+        <span className="text-[8px] font-mono text-white tracking-[0.4em] uppercase">DEYSIGNS_CORE_ENGINE</span>
+        <span className="text-[7px] font-mono text-white tracking-widest uppercase">SPINPOD_REV_3.5_STABLE</span>
       </div>
     </div>
   );
