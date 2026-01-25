@@ -103,6 +103,7 @@ export const useSpotify = () => {
         setPlayerError("AUTH_ERROR");
         localStorage.removeItem('spotify_access_token');
         setAccessToken(null);
+        setPlayerError(null);
       });
 
       player.addListener('account_error', ({ message }: { message: string }) => {

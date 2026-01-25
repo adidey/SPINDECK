@@ -102,6 +102,24 @@ const App: React.FC = () => {
     }
   };
 
+  // Moved hooks to top level to prevent crash
+  const [localProgress, setLocalProgress] = useState<number | null>(null);
+
+  // Optimistic scrub handler
+  const handleScrub = useCallback((val: number) => {
+    setLocalProgress(val);
+    spotify.seek(val);
+  }, [spotify]);
+
+  useEffect(() => {
+    if (localProgress !== null) {
+      const t = setTimeout(() => setLocalProgress(null), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [localProgress]);
+
+  const displayProgress = localProgress !== null ? localProgress : spotify.progress;
+
   if (!isSpotifyConnected) {
     return (
       <div className="boot-screen">
@@ -153,32 +171,6 @@ const App: React.FC = () => {
     );
   }
 
-  const [localProgress, setLocalProgress] = useState<number | null>(null);
-
-  // Optimistic scrub handler
-  const handleScrub = useCallback((val: number) => {
-    setLocalProgress(val);
-    spotify.seek(val);
-  }, [spotify]);
-
-  // Reset local progress if we stop scrubbing (mock logic: timeout or just rely on spotify update catching up?)
-  // Actually, standard pattern is: onDragStart -> setLocal, onDragEnd -> clearLocal.
-  // But our components don't bubble drag start/end yet. 
-  // Simple fix: If spotify progress jumps to near local, we clear local.
-  // Or just rely on setLocal being called rapidly during drag.
-  // We'll reset localProgress when spotify.progress changes significantly from it? 
-  // Better: Just use localProgress if it's set, and clear it after a short debounce? 
-  // Let's rely on the components driving it.
-
-  // NOTE: Simple debounce to clear local progress
-  useEffect(() => {
-    if (localProgress !== null) {
-      const t = setTimeout(() => setLocalProgress(null), 1000);
-      return () => clearTimeout(t);
-    }
-  }, [localProgress]);
-
-  const displayProgress = localProgress !== null ? localProgress : spotify.progress;
 
   return (
     <div className="app-root">
