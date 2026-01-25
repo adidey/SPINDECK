@@ -39,7 +39,7 @@ export const useSpotify = () => {
     const challengeBuffer = await sha256(codeVerifier);
     const codeChallenge = base64encode(challengeBuffer);
     localStorage.setItem('spotify_code_verifier', codeVerifier);
-    
+
     const scope = 'user-read-playback-state user-modify-playback-state streaming playlist-read-private user-read-currently-playing user-read-private user-read-email';
     const authUrl = new URL("https://accounts.spotify.com/authorize");
     authUrl.search = new URLSearchParams({
@@ -78,7 +78,7 @@ export const useSpotify = () => {
 
     const init = () => {
       if (playerRef.current) return; // Prevent double init
-      
+
       const player = new (window as any).Spotify.Player({
         name: 'Spinpod',
         getOAuthToken: (cb: (token: string) => void) => { cb(accessToken); },
@@ -94,18 +94,20 @@ export const useSpotify = () => {
       });
 
       player.addListener('initialization_error', ({ message }: { message: string }) => {
-          console.error('Failed to initialize', message);
-          setPlayerError("INIT_FAILED: " + message);
+        console.error('Failed to initialize', message);
+        setPlayerError("INIT_FAILED: " + message);
       });
 
       player.addListener('authentication_error', ({ message }: { message: string }) => {
-          console.error('Failed to authenticate', message);
-          setPlayerError("AUTH_ERROR");
+        console.error('Failed to authenticate', message);
+        setPlayerError("AUTH_ERROR");
+        localStorage.removeItem('spotify_access_token');
+        setAccessToken(null);
       });
 
       player.addListener('account_error', ({ message }: { message: string }) => {
-          console.error('Failed to validate Spotify account', message);
-          setPlayerError("PREMIUM_REQUIRED");
+        console.error('Failed to validate Spotify account', message);
+        setPlayerError("PREMIUM_REQUIRED");
       });
 
       player.addListener('player_state_changed', (state: any) => {
@@ -157,19 +159,19 @@ export const useSpotify = () => {
   }, [currentTrack]);
   const setVolume = useCallback((v: number) => playerRef.current?.setVolume(v), []);
 
-  return { 
-    accessToken, 
-    deviceId, 
-    isPlaying, 
-    progress, 
-    currentTrack, 
+  return {
+    accessToken,
+    deviceId,
+    isPlaying,
+    progress,
+    currentTrack,
     playerError,
     isPlayerReady: !!deviceId,
-    login, 
-    handleAuthCode, 
-    toggle, 
-    next, 
-    seek, 
-    setVolume 
+    login,
+    handleAuthCode,
+    toggle,
+    next,
+    seek,
+    setVolume
   };
 };

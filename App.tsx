@@ -15,7 +15,7 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<SessionRecord[]>(() => JSON.parse(localStorage.getItem('spinpod_history_v2') || '[]'));
   const [showHistory, setShowHistory] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
-  const [playlistUrl, setPlaylistUrl] = useState('https://open.spotify.com/playlist/7umeyatM5nQqwZYNVKD8YT?si=30701122b57e4d35');
+  const [playlistUrl, setPlaylistUrl] = useState('');
   const [volume, setVolume] = useState(0.7);
 
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);

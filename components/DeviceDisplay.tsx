@@ -36,7 +36,7 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
         </div>
 
         {/* High-Contrast Interactive Vinyl Platter */}
-        <div className="relative self-center w-72 h-72 border-[0.5px] border-white/5 bg-[#050505] overflow-hidden flex items-center justify-center">
+        <div className="relative self-center w-64 h-64 border-[0.5px] border-white/5 bg-[#050505] overflow-hidden flex items-center justify-center">
           <VinylPlayer
             currentTrack={track}
             progress={progress}
