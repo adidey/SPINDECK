@@ -44,8 +44,8 @@ const Knob: React.FC<KnobProps> = ({ label, value, onChange }) => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-5 group select-none">
-      <span className="text-[10px] font-black text-[#888] group-hover:text-[#ff9d00] transition-colors tracking-[0.2em] uppercase">
+    <div className="flex flex-col items-center gap-4 group select-none">
+      <span className="text-[11px] font-black text-white/40 group-hover:text-white transition-colors tracking-widest uppercase">
         {label}
       </span>
       <div
@@ -53,26 +53,26 @@ const Knob: React.FC<KnobProps> = ({ label, value, onChange }) => {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="relative w-24 h-24 bg-[#1a1a1a] rounded-full flex items-center justify-center cursor-ns-resize active:cursor-grabbing shadow-[0_10px_25px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.05)]"
+        className="relative w-20 h-20 bg-[#121212] rounded-full flex items-center justify-center cursor-ns-resize active:cursor-grabbing shadow-[0_15px_30px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.05)]"
         style={{ touchAction: 'none' }}
       >
-        {/* Recessed Well */}
-        <div className="absolute inset-[4px] rounded-full bg-[#111] shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]" />
+        {/* Deep Matte Base */}
+        <div className="absolute inset-1 rounded-full bg-gradient-to-br from-[#1a1a1a] to-[#080808] shadow-inner" />
 
-        {/* Main Dial Body */}
+        {/* Rotating Cylinder Body */}
         <div
-          className="relative w-[78%] h-[78%] rounded-full bg-gradient-to-b from-[#2a2a2a] to-[#222] shadow-[0_4px_8px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.05)] flex items-center justify-center transition-transform duration-75 ease-out"
+          className="relative w-[85%] h-[85%] rounded-full bg-[#111] shadow-[0_10px_20px_rgba(0,0,0,0.6)] flex items-center justify-center transition-transform duration-75 ease-out"
           style={{ transform: `rotate(${rotation}deg)` }}
         >
-          {/* Subtle Texture */}
-          <div className="absolute inset-0 rounded-full opacity-5 bg-[conic-gradient(from_0deg,_#333,_#222,_#333,_#222,_#333)]" />
+          {/* Subtle Brushed Metal Texture Overlay */}
+          <div className="absolute inset-0 rounded-full opacity-10 bg-[conic-gradient(from_0deg,_#333,_#111,_#333,_#111,_#333)]" />
 
-          {/* Glowing Indicator Dot */}
-          <div className="absolute top-2 w-2 h-2 bg-[#ff9d00] rounded-full shadow-[0_0_8px_rgba(255,157,0,0.8)]" />
+          {/* Indicator Dot - Brass/Orange Glow */}
+          <div className="absolute top-2 w-2 h-2 bg-[#ff8c00] rounded-full shadow-[0_0_12px_rgba(255,140,0,0.8)] border border-black/50" />
         </div>
 
-        {/* Inner Circumference Ring */}
-        <div className="absolute inset-3 rounded-full border border-white/[0.03] pointer-events-none" />
+        {/* Knob Inner Ring Detail */}
+        <div className="absolute inset-2 rounded-full border border-white/5 pointer-events-none opacity-20" />
       </div>
     </div>
   );

@@ -131,7 +131,7 @@ const VinylPlayer: React.FC<VinylPlayerProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        className="relative w-full h-full rounded-full cursor-grab active:cursor-grabbing select-none z-10"
+        className="relative w-56 h-56 rounded-full cursor-grab active:cursor-grabbing select-none z-10"
         style={{ touchAction: 'none' }}
       >
         <div

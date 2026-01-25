@@ -15,29 +15,28 @@ interface DeviceDisplayProps {
 
 const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr, isActive, focusMode, isPlaying, onScrub }) => {
   return (
-    <div className="relative w-full aspect-square bg-[#0a0a0a] rounded-[2.2rem] overflow-hidden flex flex-col p-8 select-none shadow-[inset_0_0_80px_rgba(0,0,0,1)]">
+    <div className="relative w-full aspect-square bg-[#010101] rounded-[2.2rem] overflow-hidden flex flex-col p-8 select-none shadow-[inset_0_0_80px_rgba(0,0,0,1)]">
       {/* Heavy Pixel Grid */}
-      <div className="absolute inset-0 pixel-grid z-30 pointer-events-none opacity-20" />
+      <div className="absolute inset-0 pixel-grid z-30 pointer-events-none opacity-30" />
 
       {/* CRT Scanline Bars */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[length:100%_4px] z-40 pointer-events-none opacity-10" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[length:100%_6px] z-40 pointer-events-none opacity-20" />
 
       {/* Main Content Area */}
       <div className="relative z-10 flex-1 flex flex-col justify-between text-white/90 animate-pixel-glow">
         {/* Status Header */}
         <div className="flex justify-between items-start">
-          <div className="flex flex-col gap-1">
-            <span className="text-[12px] font-pixel tracking-[0.2em] font-bold text-white/50 uppercase">{focusMode}</span>
-            <span className="text-[9px] font-mono tracking-widest text-[#ff9d00]/40 uppercase">UNIT_REV_0912</span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-pixel tracking-[0.3em] font-bold text-white/30 uppercase">{focusMode}</span>
+            <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">UNIT_REV_0912</span>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-white shadow-[0_0_10px_white] blink-active' : 'bg-white/10'}`} />
-            <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-[#ff9d00] shadow-[0_0_15px_#ff9d00]' : 'bg-[#333]'}`} />
+          <div className="flex flex-col items-end">
+            <div className={`w-2.5 h-2.5 rounded-full mb-1 ${isActive ? 'bg-white shadow-[0_0_15px_white]' : 'bg-white/5'}`} />
           </div>
         </div>
 
         {/* High-Contrast Interactive Vinyl Platter */}
-        <div className="relative self-center w-64 h-64 border-[0.5px] border-white/5 bg-[#050505] overflow-hidden flex items-center justify-center">
+        <div className="relative self-center w-56 h-56 border-[0.5px] border-white/5 bg-[#050505] overflow-hidden flex items-center justify-center">
           <VinylPlayer
             currentTrack={track}
             progress={progress}
@@ -52,21 +51,20 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
           <div className="absolute inset-0 opacity-10 pointer-events-none z-20 mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
         </div>
 
-        {/* Footer Info - New Layout */}
+        {/* Footer Info */}
         <div className="flex flex-col gap-4">
           <div className="flex justify-between items-end">
-            <div className="flex flex-col max-w-[50%]">
-              <span className="text-[16px] font-pixel tracking-[0.1em] font-bold uppercase truncate text-[#ff9d00]">{track.title}</span>
-              <span className="text-[10px] font-mono tracking-widest text-white/40 uppercase truncate">{track.artist}</span>
+            <div className="flex flex-col max-w-[60%]">
+              <span className="text-[14px] font-pixel tracking-[0.2em] font-bold uppercase truncate">{track.title}</span>
+              <span className="text-[9px] font-mono tracking-widest text-white/30 uppercase truncate">{track.artist}</span>
             </div>
-
-            <span className="text-[42px] font-pixel tabular-nums tracking-tighter leading-none text-[#ff9d00]">{timeStr}</span>
+            <span className="text-5xl font-pixel tabular-nums tracking-tighter leading-none">{timeStr}</span>
           </div>
 
           {/* High-Res Progress Bar */}
-          <div className="h-[3px] w-full bg-[#333] overflow-hidden rounded-full">
+          <div className="h-[2px] w-full bg-white/5 overflow-hidden rounded-full">
             <div
-              className="h-full bg-[#ff9d00] transition-all duration-75 shadow-[0_0_10px_#ff9d00]"
+              className="h-full bg-white transition-all duration-300 shadow-[0_0_10px_white]"
               style={{ width: `${progress * 100}%` }}
             />
           </div>
@@ -74,7 +72,7 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
       </div>
 
       {/* Screen Glare Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none z-50 opacity-20" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none z-50 opacity-40" />
     </div>
   );
 };
