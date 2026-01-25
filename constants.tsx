@@ -16,7 +16,7 @@ export const FOCUS_CONFIG = {
     color: '#FFFFFF'
   },
   [FocusMode.LIGHT]: {
-    duration: 25 * 60,
+    duration: 15 * 60,
     label: 'PRGM_LIGHT',
     color: '#FFFFFF'
   },

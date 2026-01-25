@@ -30,8 +30,9 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
             <span className="text-[12px] font-pixel tracking-[0.2em] font-bold text-white/50 uppercase">{focusMode}</span>
             <span className="text-[9px] font-mono tracking-widest text-[#ff9d00]/40 uppercase">UNIT_REV_0912</span>
           </div>
-          <div className="flex flex-col items-end">
-            <div className={`w-3 h-3 rounded-full mb-1 ${isActive ? 'bg-[#ff9d00] shadow-[0_0_15px_#ff9d00]' : 'bg-[#333]'}`} />
+          <div className="flex flex-col items-end gap-2">
+            <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-white shadow-[0_0_10px_white] blink-active' : 'bg-white/10'}`} />
+            <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-[#ff9d00] shadow-[0_0_15px_#ff9d00]' : 'bg-[#333]'}`} />
           </div>
         </div>
 
