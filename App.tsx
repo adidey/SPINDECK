@@ -207,7 +207,7 @@ const App: React.FC = () => {
             <div className="status-footer">
               <div className="indicator-group">
                 <div className="led-cluster">
-                  <div className={`led ${isSpotifyConnected ? 'led-active blink-active bg-[#1ed760] shadow-[0_0_15px_rgba(30,215,96,0.8)]' : ''}`} />
+                  <div className={`led ${isSpotifyConnected ? 'led-active blink-active bg-[#ff0000] shadow-[0_0_15px_rgba(255,0,0,0.8)]' : ''}`} />
                   <div className="led" />
                 </div>
                 <span className="syst-label">SYST_ACTIVE</span>

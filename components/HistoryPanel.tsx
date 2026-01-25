@@ -16,7 +16,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onClose }) => {
   }, [history]);
 
   return (
-    <div className="fixed inset-y-0 right-0 w-80 bg-[#0a0a0a] border-l border-white/5 p-8 flex flex-col shadow-2xl z-[100] panel-slide-in">
+    <div className="fixed inset-y-0 right-0 w-80 bg-[#0a0a0a] border-l border-white/5 p-8 flex flex-col shadow-2xl z-[100] animate-in slide-in-from-right duration-300">
       <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/5">
         <div className="flex flex-col">
           <h3 className="text-sm font-black text-white uppercase tracking-tighter">FOCUS_MANIFEST</h3>

@@ -12,9 +12,9 @@ const TrackInfo: React.FC<TrackInfoProps> = ({ track, progress }) => {
     <div className="flex flex-col items-center text-center w-full max-w-sm space-y-4">
       <div className="flex flex-col items-center space-y-1">
         <div className="flex items-center gap-4 text-zinc-600">
-           <span className="text-[9px] font-mono tracking-widest uppercase font-bold">CODE_{track.trackNumber.toString().padStart(2, '0')}</span>
-           <div className="w-[1px] h-2 bg-zinc-800" />
-           <span className="text-[9px] font-mono tracking-widest uppercase">{track.albumTitle}</span>
+          <span className="text-[9px] font-mono tracking-widest uppercase font-bold">CODE_{track.trackNumber.toString().padStart(2, '0')}</span>
+          <div className="w-[1px] h-2 bg-zinc-800" />
+          <span className="text-[9px] font-mono tracking-widest uppercase">{track.albumTitle}</span>
         </div>
         <h2 className="text-2xl font-black text-white tracking-tight uppercase leading-none">
           {track.title}
@@ -23,11 +23,11 @@ const TrackInfo: React.FC<TrackInfoProps> = ({ track, progress }) => {
           {track.artist}
         </p>
       </div>
-      
+
       {/* Industrial Linear Meter */}
       <div className="w-72 flex flex-col gap-2">
         <div className="h-[3px] bg-zinc-900 w-full relative">
-          <div 
+          <div
             className="absolute inset-y-0 left-0 bg-white transition-all duration-300"
             style={{ width: `${progress * 100}%` }}
           />

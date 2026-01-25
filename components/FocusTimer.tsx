@@ -13,7 +13,7 @@ interface FocusTimerProps {
 const FocusTimer: React.FC<FocusTimerProps> = ({ mode, isActive, onComplete, onTick }) => {
   const [timeLeft, setTimeLeft] = useState(FOCUS_CONFIG[mode].duration);
   const total = FOCUS_CONFIG[mode].duration;
-  
+
   useEffect(() => {
     setTimeLeft(FOCUS_CONFIG[mode].duration);
   }, [mode]);
@@ -67,7 +67,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ mode, isActive, onComplete, onT
           className="transition-all duration-1000 ease-linear"
         />
       </svg>
-      
+
       {/* Center Readout Display */}
       <div className="absolute top-[12%] flex flex-col items-center">
         <div className="flex items-center gap-3 mb-2">
