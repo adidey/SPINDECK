@@ -31,6 +31,8 @@ export const useSpotify = () => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const playerRef = useRef<any>(null);
 
+  const [playerError, setPlayerError] = useState<string | null>(null);
+
   const login = useCallback(async () => {
     const redirectUri = window.location.origin + window.location.pathname;
     const codeVerifier = generateRandomString(128);
@@ -67,6 +69,7 @@ export const useSpotify = () => {
       }
     } catch (err) {
       console.error("Auth exchange failed", err);
+      setPlayerError("AUTH_FAILED");
     }
   }, []);
 
@@ -84,6 +87,25 @@ export const useSpotify = () => {
 
       player.addListener('ready', ({ device_id }: { device_id: string }) => {
         setDeviceId(device_id);
+      });
+
+      player.addListener('not_ready', ({ device_id }: { device_id: string }) => {
+        console.log('Device ID has gone offline', device_id);
+      });
+
+      player.addListener('initialization_error', ({ message }: { message: string }) => {
+          console.error('Failed to initialize', message);
+          setPlayerError("INIT_FAILED: " + message);
+      });
+
+      player.addListener('authentication_error', ({ message }: { message: string }) => {
+          console.error('Failed to authenticate', message);
+          setPlayerError("AUTH_ERROR");
+      });
+
+      player.addListener('account_error', ({ message }: { message: string }) => {
+          console.error('Failed to validate Spotify account', message);
+          setPlayerError("PREMIUM_REQUIRED");
       });
 
       player.addListener('player_state_changed', (state: any) => {
@@ -135,5 +157,19 @@ export const useSpotify = () => {
   }, [currentTrack]);
   const setVolume = useCallback((v: number) => playerRef.current?.setVolume(v), []);
 
-  return { accessToken, deviceId, isPlaying, progress, currentTrack, login, handleAuthCode, toggle, next, seek, setVolume };
+  return { 
+    accessToken, 
+    deviceId, 
+    isPlaying, 
+    progress, 
+    currentTrack, 
+    playerError,
+    isPlayerReady: !!deviceId,
+    login, 
+    handleAuthCode, 
+    toggle, 
+    next, 
+    seek, 
+    setVolume 
+  };
 };

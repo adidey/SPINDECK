@@ -17,7 +17,7 @@ const App: React.FC = () => {
   const [showLibrary, setShowLibrary] = useState(false);
   const [playlistUrl, setPlaylistUrl] = useState('https://open.spotify.com/playlist/7umeyatM5nQqwZYNVKD8YT?si=30701122b57e4d35');
   const [volume, setVolume] = useState(0.7);
-  
+
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const processingCode = useRef(false);
@@ -55,7 +55,7 @@ const App: React.FC = () => {
       spotify.login();
       return;
     }
-    
+
     setIsSyncing(true);
     try {
       const id = target.match(/playlist\/([a-zA-Z0-9]+)/)?.[1];
@@ -69,8 +69,8 @@ const App: React.FC = () => {
       } else if (!id) {
         setIsSpotifyConnected(true);
       }
-    } catch (err) { 
-      console.error("Sync failed", err); 
+    } catch (err) {
+      console.error("Sync failed", err);
       setIsSpotifyConnected(true);
     } finally {
       setIsSyncing(false);
@@ -85,7 +85,7 @@ const App: React.FC = () => {
           <div className="boot-well">
             <div className={`boot-led ${spotify.accessToken ? 'bg-[#1ed760] shadow-[0_0_15px_rgba(30,215,96,0.8)]' : 'bg-white/5'}`} />
           </div>
-          
+
           <div className="boot-header text-center">
             <h1>SPINPOD</h1>
             <p>CORE_REV: 3.5.0</p>
@@ -93,20 +93,23 @@ const App: React.FC = () => {
 
           <div className="w-full flex flex-col gap-6 px-4">
             <div className="boot-input-well">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="https://open.spotify.com/playlist/..."
                 value={playlistUrl}
                 onChange={(e) => setPlaylistUrl(e.target.value)}
                 className="boot-input"
               />
             </div>
-            <button 
-              onClick={() => handleSync(playlistUrl)} 
-              disabled={isSyncing}
-              className="boot-btn"
+            <button
+              onClick={() => handleSync(playlistUrl)}
+              disabled={isSyncing || (!!spotify.accessToken && !spotify.isPlayerReady && !spotify.playerError)}
+              className={`boot-btn ${spotify.playerError ? 'boot-btn-error' : ''}`}
             >
-              {isSyncing ? 'SYNCING...' : spotify.accessToken ? 'SYNC & BOOT' : 'CONNECT SPOTIFY'}
+              {isSyncing ? 'SYNCING...' :
+                spotify.playerError ? spotify.playerError :
+                  (spotify.accessToken && !spotify.isPlayerReady) ? 'INITIALIZING...' :
+                    spotify.accessToken ? 'SYNC & BOOT' : 'CONNECT SPOTIFY'}
             </button>
           </div>
 
@@ -134,13 +137,13 @@ const App: React.FC = () => {
         </div>
 
         <div className="display-well">
-          <DeviceDisplay 
-            track={spotify.currentTrack || { title: 'READY', artist: 'SYSTEM', id: '0', albumArt: '', durationMs: 0, albumTitle: '', trackNumber: 0 }} 
-            progress={spotify.progress} 
-            timeStr={timer.timeStr} 
-            isActive={timer.isActive} 
-            focusMode={FOCUS_CONFIG[focusMode].label} 
-            isPlaying={spotify.isPlaying} 
+          <DeviceDisplay
+            track={spotify.currentTrack || { title: 'READY', artist: 'SYSTEM', id: '0', albumArt: '', durationMs: 0, albumTitle: '', trackNumber: 0 }}
+            progress={spotify.progress}
+            timeStr={timer.timeStr}
+            isActive={timer.isActive}
+            focusMode={FOCUS_CONFIG[focusMode].label}
+            isPlaying={spotify.isPlaying}
             onScrub={spotify.seek}
           />
         </div>
