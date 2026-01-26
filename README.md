@@ -1,40 +1,32 @@
+# SPINPOD
 
-# 🎚️ Spinpod
+This is a personal project I built because I'm tired of music players that look like spreadsheets. I wanted something that felt like heavy hardware—the kind of industrial equipment you'd find in a lab or a high-end 1970s studio—but applied to a focus timer.
 
-Spinpod is a minimalist, industrial-style focus companion inspired by mid-century audio equipment and the design principles of Dieter Rams. It combines high-precision tactile aesthetics with modern "Neural Sync" technology to create a distraction-free environment for deep work.
+## Why this exists
+I find modern UI too "polite" and flat. I wanted high-contrast blacks, CRT flickering, and knobs that actually feel like they have torque. It's a focus tool, first and foremost. It doesn't help you discover music; it helps you stay in the zone with what you already have.
 
-## 🧠 Core Features
+## Design Philosophy
+The aesthetic is heavily inspired by Dieter Rams and industrial hardware (think Braun or Tascam).
+- **Physicality over convenience**: The side switch and rotary knobs are intentional. Hovering isn't enough; you have to "interact" with it.
+- **The CRT look**: I spent a lot of time on the dithered album art and scanlines. It's supposed to look slightly "off" and analog, not crisp and retina-ready.
+- **Monochrome-ish**: Color is used only where it matters—for status indicators (Red/Green LEDs). Everything else is about shadows and textures.
 
-- **Neural Playlist Sync**: Uses Gemini AI to "decode" public Spotify playlist URLs and generate a curated, dithered visual playback experience without complex OAuth logins.
-- **Precision Control Interface**:
-  - **WEIGHT**: Density/Volume control.
-  - **WIDTH**: Temporal seeking and timeline navigation.
-  - **SLANT**: Program selection (Deep Focus, Light Focus, Break Mode).
-- **Industrial Display**: 8-bit dithered monochrome display with CRT scanlines and pixelated album art.
-- **Session Logging**: Internal "Data Log" to track focus sessions and track history.
+## The Spotify Problem (Trade-offs)
+Spotify's API is a nightmare for a "minimalist" tool because it forces you through complex OAuth flows just to see what's playing. 
+- **The Hack**: I'm using Gemini AI to "decode" public playlist URLs. It's a bit of a workaround, but it lets the UI stay clean without a million "Login with Spotify" popups.
+- **The Limitation**: Since I'm not doing full OAuth by default, control is one-way. This is a *display* and *controller* first. If you want a full Spotify client with search and discovery, use the actual Spotify app.
 
-## 🛠️ Technical Specification
+## Intentionally Out of Scope
+I'm not going to build these:
+- **Search bar**: You should know what playlist you're listening to before you sit down to work.
+- **Social features**: No "see what friends are listening to." This is for deep work, not hanging out.
+- **Mobile optimization**: This was designed specifically for a desktop or a dedicated tablet "console" on your desk. Using it on a phone feels cramped and ruins the scale.
 
-- **Framework**: React 19 (ES6+ Modules)
-- **Styling**: Tailwind CSS
-- **AI Engine**: Google Gemini 3 Flash (via `@google/genai`)
-- **Typography**: Inter (UI), JetBrains Mono (Technical), VT323 (Display)
-- **Deployment**: Optimized for Vercel/Netlify with Environment Variable support.
-
-## 🚀 Deployment & Environment
-
-To enable the **Neural Sync** feature, you must provide a Google Gemini API Key.
-
-1.  **Get a Key**: Visit [Google AI Studio](https://aistudio.google.com/).
-2.  **Environment Variable**:
-    - **Name**: `API_KEY`
-    - **Value**: Your unique API key string.
-
-### Local Development
-The app includes a "Factory Default" protocol. If no API Key is detected, the device will automatically boot from its internal local library (`MOCK_TRACKS`), allowing for full offline functionality.
-
-## 🎨 Design Philosophy
-The Spinpod is designed to be felt as much as seen. The knobs utilize pointer-capture gestures to simulate high-torque rotary resistance, and the copper "Physical Switch" on the side provides a tactile start/stop mechanism.
+## Setup
+If you want to run this yourself, you'll need a Google AI Studio (Gemini) API key.
+1. Create a `.env` file.
+2. Add `VITE_GEMINI_API_KEY=your_key_here`.
+3. `npm install` and `npm run dev`.
 
 ---
-*Built for the digital minimalist by DEYSIGNS.*
+*Built for me, shared with you. - DEYSIGNS*

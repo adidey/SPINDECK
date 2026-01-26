@@ -1,8 +1,8 @@
 
-export enum FocusMode {
-  DEEP = 'DEEP FOCUS',
-  LIGHT = 'LIGHT FOCUS',
-  BREAK = 'BREAK MODE'
+export enum ProgramState {
+  STANDBY = 'STANDBY',
+  ENGAGED = 'ENGAGED',
+  HOLD = 'HOLD'
 }
 
 export interface Track {
@@ -13,14 +13,6 @@ export interface Track {
   durationMs: number;
   albumTitle: string;
   trackNumber: number;
-}
-
-export interface SessionRecord {
-  id: string;
-  mode: FocusMode;
-  startTime: number;
-  durationSeconds: number;
-  tracks: string[];
 }
 
 export interface PlaybackState {

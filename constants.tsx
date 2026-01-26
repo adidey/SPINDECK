@@ -1,5 +1,5 @@
 
-import { FocusMode, Track } from './types';
+import { Track } from './types';
 
 export const COLORS = {
   background: '#080808',
@@ -7,24 +7,6 @@ export const COLORS = {
   accent: '#d4af37', // Brass/Gold
   copper: '#d2691e',
   textDim: 'rgba(255,255,255,0.3)'
-};
-
-export const FOCUS_CONFIG = {
-  [FocusMode.DEEP]: {
-    duration: 50 * 60,
-    label: 'PRGM_DEEP',
-    color: '#FFFFFF'
-  },
-  [FocusMode.LIGHT]: {
-    duration: 15 * 60,
-    label: 'PRGM_LIGHT',
-    color: '#FFFFFF'
-  },
-  [FocusMode.BREAK]: {
-    duration: 5 * 60,
-    label: 'PRGM_BREAK',
-    color: '#FFFFFF'
-  }
 };
 
 export const MOCK_TRACKS: Track[] = [

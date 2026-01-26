@@ -151,6 +151,21 @@ export const useSpotify = () => {
     };
   }, [accessToken]);
 
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+
+  const toggleShuffle = useCallback(async () => {
+    if (!accessToken || !deviceId) return;
+    try {
+      await fetch(`https://api.spotify.com/v1/me/player/shuffle?state=${!isShuffleEnabled}&device_id=${deviceId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      setIsShuffleEnabled(!isShuffleEnabled);
+    } catch (err) {
+      console.error("Shuffle toggle failed", err);
+    }
+  }, [accessToken, deviceId, isShuffleEnabled]);
+
   const toggle = useCallback(() => playerRef.current?.togglePlay(), []);
   const next = useCallback(() => playerRef.current?.nextTrack(), []);
   const seek = useCallback((p: number) => {
@@ -164,6 +179,7 @@ export const useSpotify = () => {
     accessToken,
     deviceId,
     isPlaying,
+    isShuffleEnabled,
     progress,
     currentTrack,
     playerError,
@@ -173,6 +189,7 @@ export const useSpotify = () => {
     toggle,
     next,
     seek,
-    setVolume
+    setVolume,
+    toggleShuffle
   };
 };

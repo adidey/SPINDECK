@@ -8,12 +8,14 @@ interface DeviceDisplayProps {
   progress: number;
   timeStr: string;
   isActive: boolean;
-  focusMode: string;
+  modeValue: number;
   isPlaying: boolean;
   onScrub: (newProgress: number) => void;
 }
 
-const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr, isActive, focusMode, isPlaying, onScrub }) => {
+const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr, isActive, modeValue, isPlaying, onScrub }) => {
+  const modeLabel = modeValue < 0.2 ? 'LISTENING_AMBIENT' : modeValue > 0.8 ? 'LISTENING_DENSE' : 'LISTENING_NEUTRAL';
+
   return (
     <div className="relative w-full aspect-square bg-[#010101] rounded-[2.2rem] overflow-hidden flex flex-col p-8 select-none shadow-[inset_0_0_80px_rgba(0,0,0,1)]">
       {/* Heavy Pixel Grid */}
@@ -27,8 +29,8 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
         {/* Status Header */}
         <div className="flex justify-between items-start">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-pixel tracking-[0.3em] font-bold text-white/30 uppercase">{focusMode}</span>
-            <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">UNIT_REV_0912</span>
+            <span className="text-[10px] font-pixel tracking-[0.3em] font-bold text-white/30 uppercase">{modeLabel}</span>
+            <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">UNIT_REV_4.0</span>
           </div>
           <div className="flex flex-col items-end">
             <div className={`w-2.5 h-2.5 rounded-full mb-1 ${isActive ? 'bg-white shadow-[0_0_15px_white]' : 'bg-white/5'}`} />
@@ -42,6 +44,7 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
             progress={progress}
             isPlaying={isPlaying}
             onScrub={onScrub}
+            modeValue={modeValue}
           />
 
           {/* Depth Gradient Overlay */}

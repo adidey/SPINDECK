@@ -8,6 +8,7 @@ interface VinylPlayerProps {
   isPlaying: boolean;
   onScrub: (newProgress: number) => void;
   rotationSpeed?: number;
+  modeValue?: number; // Listening Mode influence (0.0 -> 1.0)
 }
 
 const VinylPlayer: React.FC<VinylPlayerProps> = ({
@@ -15,7 +16,8 @@ const VinylPlayer: React.FC<VinylPlayerProps> = ({
   progress,
   isPlaying,
   onScrub,
-  rotationSpeed = 1.2
+  rotationSpeed = 1.2,
+  modeValue = 0.5
 }) => {
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -29,8 +31,8 @@ const VinylPlayer: React.FC<VinylPlayerProps> = ({
   const velocityHistoryRef = useRef<number[]>([]);
   const requestRef = useRef<number>(null);
 
-  // Inertia constants
-  const FRICTION = 0.985;
+  // Dynamic friction based on Listening Mode (0.0: low drag, 1.0: dense drag)
+  const FRICTION = 0.999 - (modeValue * 0.05);
   const MIN_VELOCITY = 0.01;
 
   useEffect(() => {
