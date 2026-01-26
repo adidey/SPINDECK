@@ -196,44 +196,25 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.led-red {
-  background-color: #ff0000;
-  box-shadow: 0 0 12px rgba(255, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.2);
-}
-
-.led-green {
-  background-color: #00ff66;
-  box-shadow: 0 0 12px rgba(0, 255, 102, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.2);
-}
-
-.syst-label {
-  font-size: 10px;
-  font-weight: 900;
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  min-width: 100px;
-}
-
-.silver-badge::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.2;
-  mix-blend-mode: multiply;
+.silver-badge {
+  width: 92%;
+  height: 82%;
+  border-radius: 9999px;
+  background: linear-gradient(to bottom right, #888, #aaa, #666);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .badge-text {
-  position: relative;
-  z-index: 10;
   font-size: 15px;
-  font-weight: 950;
-  color: rgba(0, 0, 0, 0.9);
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.8);
   letter-spacing: -0.05em;
   text-transform: uppercase;
   font-style: italic;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .technical-footer {

@@ -37,16 +37,6 @@ const App: React.FC = () => {
   }, [focusMode, spotify.currentTrack]);
 
   const timer = useFocusTimer(focusMode, handleComplete);
-
-  // Sync timer activity with music playback
-  useEffect(() => {
-    if (spotify.isPlaying) {
-      timer.setIsActive(true);
-    } else {
-      timer.setIsActive(false);
-    }
-  }, [spotify.isPlaying, timer.setIsActive]);
-
   useEffect(() => localStorage.setItem('spinpod_history_v2', JSON.stringify(history)), [history]);
 
   useEffect(() => {
@@ -201,16 +191,14 @@ const App: React.FC = () => {
         </div>
 
         <div className="controls-well">
-          <div className="control-plate">
-            <div className="knob-row">
-              <Knob label="VOLUME" value={volume} onChange={(v) => { setVolume(v); spotify.setVolume(v); }} />
-              <Knob label="SEEK" value={displayProgress} onChange={handleScrub} />
-              <Knob label="PROGRAM" value={focusMode === FocusMode.DEEP ? 1 : focusMode === FocusMode.LIGHT ? 0.5 : 0} onChange={(val) => {
-                if (val < 0.33) setFocusMode(FocusMode.BREAK);
-                else if (val > 0.66) setFocusMode(FocusMode.DEEP);
-                else setFocusMode(FocusMode.LIGHT);
-              }} />
-            </div>
+          <div className="knob-row">
+            <Knob label="VOLUME" value={volume} onChange={(v) => { setVolume(v); spotify.setVolume(v); }} />
+            <Knob label="SEEK" value={displayProgress} onChange={handleScrub} />
+            <Knob label="PROGRAM" value={focusMode === FocusMode.DEEP ? 1 : focusMode === FocusMode.LIGHT ? 0.5 : 0} onChange={(val) => {
+              if (val < 0.33) setFocusMode(FocusMode.BREAK);
+              else if (val > 0.66) setFocusMode(FocusMode.DEEP);
+              else setFocusMode(FocusMode.LIGHT);
+            }} />
           </div>
 
           <div className="status-section">
@@ -218,10 +206,10 @@ const App: React.FC = () => {
             <div className="status-footer">
               <div className="indicator-group">
                 <div className="led-cluster">
-                  <div className={`led ${isSpotifyConnected && !spotify.isPlaying ? 'led-red blink-active' : 'opacity-20'}`} />
-                  <div className={`led ${spotify.isPlaying ? 'led-green crt-flicker' : 'opacity-20'}`} />
+                  <div className={`led ${isSpotifyConnected ? 'led-active blink-active bg-[#ff0000] shadow-[0_0_15px_rgba(255,0,0,0.8)]' : ''}`} />
+                  <div className="led" />
                 </div>
-                <span className="syst-label">{spotify.isPlaying ? 'SYST_ACTIVE' : 'SYST_INACTIVE'}</span>
+                <span className="syst-label">SYST_ACTIVE</span>
               </div>
               <div className="transport-btns">
                 <button onClick={() => setShowLibrary(true)} className="transport-icon"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z" /></svg></button>
