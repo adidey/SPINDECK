@@ -198,8 +198,8 @@ const App: React.FC = () => {
                   onClick={() => spotify.toggleShuffle()}
                   className={`transport-icon ${spotify.isShuffleEnabled ? 'text-white opacity-100' : 'opacity-30'}`}
                 >
-                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828L15 15M9 9l-.172-.172M15 9l-6 6m0-6l6 6" />
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M4 4l5 5M15 15l6 6" />
                   </svg>
                 </button>
               </div>
