@@ -23,20 +23,17 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
       <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[length:100%_6px] z-40 pointer-events-none opacity-20" />
 
       {/* Main Content Area */}
-      <div className="relative z-10 flex-1 flex flex-col justify-between text-white/90 animate-pixel-glow">
+      <div className="relative z-10 flex-1 flex flex-col justify-between text-white/90 crt-flicker">
         {/* Status Header */}
         <div className="flex justify-between items-start">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-pixel tracking-[0.3em] font-bold text-white/30 uppercase">{focusMode}</span>
+            <span className="text-[10px] font-pixel tracking-[0.3em] font-bold text-white/30 uppercase phosphor-glow">{focusMode}</span>
             <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">UNIT_REV_0912</span>
-          </div>
-          <div className="flex flex-col items-end">
-            <div className={`w-2.5 h-2.5 rounded-full mb-1 ${isActive ? 'bg-white shadow-[0_0_15px_white]' : 'bg-white/5'}`} />
           </div>
         </div>
 
         {/* High-Contrast Interactive Vinyl Platter */}
-        <div className="relative self-center w-56 h-56 border-[0.5px] border-white/5 bg-[#050505] overflow-hidden flex items-center justify-center">
+        <div className="relative self-center w-56 h-56 border-[0.5px] border-white/5 bg-[#050505] overflow-hidden flex items-center justify-center rounded-full shadow-[inset_0_0_40px_rgba(0,0,0,0.8)]">
           <VinylPlayer
             currentTrack={track}
             progress={progress}
@@ -52,13 +49,13 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
         </div>
 
         {/* Footer Info */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2 mb-2">
           <div className="flex justify-between items-end">
             <div className="flex flex-col max-w-[60%]">
-              <span className="text-[14px] font-pixel tracking-[0.2em] font-bold uppercase truncate">{track.title}</span>
+              <span className="text-[14px] font-pixel tracking-[0.2em] font-bold uppercase truncate phosphor-glow">{track.title}</span>
               <span className="text-[9px] font-mono tracking-widest text-white/30 uppercase truncate">{track.artist}</span>
             </div>
-            <span className="text-5xl font-pixel tabular-nums tracking-tighter leading-none">{timeStr}</span>
+            <span className="text-5xl font-pixel tabular-nums tracking-tighter leading-none phosphor-glow">{timeStr}</span>
           </div>
 
           {/* High-Res Progress Bar */}
@@ -70,6 +67,9 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
           </div>
         </div>
       </div>
+
+      {/* Physical Screen Depth */}
+      <div className="absolute inset-0 shadow-[inset_0_0_60px_rgba(0,0,0,0.9)] pointer-events-none z-[45]" />
 
       {/* Screen Glare Overlay */}
       <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none z-50 opacity-40" />
