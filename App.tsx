@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { FocusMode, SessionRecord } from './types.ts';
 import { FOCUS_CONFIG } from './constants.tsx';
 import { useSpotify } from './hooks/useSpotify.ts';
@@ -121,120 +122,126 @@ const App: React.FC = () => {
 
   if (!isSpotifyConnected) {
     return (
-      <div className="boot-screen">
-        <div className="boot-card">
-          <div className="boot-well">
-            <div className={`boot-led ${spotify.accessToken ? 'bg-[#1ed760] shadow-[0_0_15px_rgba(30,215,96,0.8)]' : 'bg-white/5'}`} />
-          </div>
-
-          <div className="boot-header text-center">
-            <h1>SPINPOD</h1>
-            <p>CORE_REV: 3.5.0</p>
-          </div>
-
-          <div className="w-full flex flex-col gap-6 px-4">
-            <div className="boot-input-well">
-              <input
-                type="text"
-                placeholder="https://open.spotify.com/playlist/..."
-                value={playlistUrl}
-                onChange={(e) => setPlaylistUrl(e.target.value)}
-                className="boot-input"
-              />
+      <>
+        <div className="boot-screen">
+          <div className="boot-card">
+            <div className="boot-well">
+              <div className={`boot-led ${spotify.accessToken ? 'bg-[#1ed760] shadow-[0_0_15px_rgba(30,215,96,0.8)]' : 'bg-white/5'}`} />
             </div>
-            <button
-              onClick={() => handleSync(playlistUrl)}
-              disabled={isSyncing || (!!spotify.accessToken && !spotify.isPlayerReady && !spotify.playerError)}
-              className={`boot-btn ${spotify.playerError ? 'boot-btn-error' : ''}`}
-            >
-              {isSyncing ? 'SYNCING...' :
-                spotify.playerError ? spotify.playerError :
-                  (spotify.accessToken && !spotify.isPlayerReady) ? 'INITIALIZING...' :
-                    spotify.accessToken ? 'SYNC & BOOT' : 'CONNECT SPOTIFY'}
-            </button>
-          </div>
 
-          <div className="branding-footer">
-            <div className="boot-badge-recess">
-              <div className="boot-badge-inner">
-                <span>DEYSIGNS</span>
+            <div className="boot-header text-center">
+              <h1>SPINPOD</h1>
+              <p>CORE_REV: 3.5.0</p>
+            </div>
+
+            <div className="w-full flex flex-col gap-6 px-4">
+              <div className="boot-input-well">
+                <input
+                  type="text"
+                  placeholder="https://open.spotify.com/playlist/..."
+                  value={playlistUrl}
+                  onChange={(e) => setPlaylistUrl(e.target.value)}
+                  className="boot-input"
+                />
               </div>
+              <button
+                onClick={() => handleSync(playlistUrl)}
+                disabled={isSyncing || (!!spotify.accessToken && !spotify.isPlayerReady && !spotify.playerError)}
+                className={`boot-btn ${spotify.playerError ? 'boot-btn-error' : ''}`}
+              >
+                {isSyncing ? 'SYNCING...' :
+                  spotify.playerError ? spotify.playerError :
+                    (spotify.accessToken && !spotify.isPlayerReady) ? 'INITIALIZING...' :
+                      spotify.accessToken ? 'SYNC & BOOT' : 'CONNECT SPOTIFY'}
+              </button>
             </div>
-            <div className="boot-technical-labels">
-              <span>S_ID</span>
-              <span>B_LOG</span>
+
+            <div className="branding-footer">
+              <div className="boot-badge-recess">
+                <div className="boot-badge-inner">
+                  <span>DEYSIGNS</span>
+                </div>
+              </div>
+              <div className="boot-technical-labels">
+                <span>S_ID</span>
+                <span>B_LOG</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+        <Analytics />
+      </>
     );
   }
 
 
   return (
-    <div className="app-root">
-      <div className="chassis">
-        <div onClick={spotify.toggle} className="side-switch">
-          <div className={`switch-nub ${spotify.isPlaying ? 'switch-nub-down' : 'switch-nub-up'}`} />
-        </div>
-
-        <div className="display-well">
-          <DeviceDisplay
-            track={spotify.currentTrack || { title: 'READY', artist: 'SYSTEM', id: '0', albumArt: '', durationMs: 0, albumTitle: '', trackNumber: 0 }}
-            progress={displayProgress}
-            timeStr={timer.timeStr}
-            isActive={timer.isActive}
-            focusMode={FOCUS_CONFIG[focusMode].label}
-            isPlaying={spotify.isPlaying}
-            onScrub={handleScrub}
-          />
-        </div>
-
-        <div className="controls-well">
-          <div className="knob-row">
-            <Knob label="VOLUME" value={volume} onChange={(v) => { setVolume(v); spotify.setVolume(v); }} />
-            <Knob label="SEEK" value={displayProgress} onChange={handleScrub} />
-            <Knob label="PROGRAM" value={focusMode === FocusMode.DEEP ? 1 : focusMode === FocusMode.LIGHT ? 0.5 : 0} onChange={(val) => {
-              if (val < 0.33) setFocusMode(FocusMode.BREAK);
-              else if (val > 0.66) setFocusMode(FocusMode.DEEP);
-              else setFocusMode(FocusMode.LIGHT);
-            }} />
+    <>
+      <div className="app-root">
+        <div className="chassis">
+          <div onClick={spotify.toggle} className="side-switch">
+            <div className={`switch-nub ${spotify.isPlaying ? 'switch-nub-down' : 'switch-nub-up'}`} />
           </div>
 
-          <div className="status-section">
-            <div className="divider" />
-            <div className="status-footer">
-              <div className="indicator-group">
-                <div className="led-cluster">
-                  <div className={`led ${isSpotifyConnected ? 'led-active blink-active bg-[#ff0000] shadow-[0_0_15px_rgba(255,0,0,0.8)]' : ''}`} />
-                  <div className="led" />
-                </div>
-                <span className="syst-label">SYST_ACTIVE</span>
-              </div>
-              <div className="transport-btns">
-                <button onClick={() => setShowLibrary(true)} className="transport-icon"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z" /></svg></button>
-                <button onClick={spotify.next} className="transport-icon"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg></button>
-                <button onClick={() => setShowHistory(true)} className="transport-icon"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" /></svg></button>
-              </div>
+          <div className="display-well">
+            <DeviceDisplay
+              track={spotify.currentTrack || { title: 'READY', artist: 'SYSTEM', id: '0', albumArt: '', durationMs: 0, albumTitle: '', trackNumber: 0 }}
+              progress={displayProgress}
+              timeStr={timer.timeStr}
+              isActive={timer.isActive}
+              focusMode={FOCUS_CONFIG[focusMode].label}
+              isPlaying={spotify.isPlaying}
+              onScrub={handleScrub}
+            />
+          </div>
+
+          <div className="controls-well">
+            <div className="knob-row">
+              <Knob label="VOLUME" value={volume} onChange={(v) => { setVolume(v); spotify.setVolume(v); }} />
+              <Knob label="SEEK" value={displayProgress} onChange={handleScrub} />
+              <Knob label="PROGRAM" value={focusMode === FocusMode.DEEP ? 1 : focusMode === FocusMode.LIGHT ? 0.5 : 0} onChange={(val) => {
+                if (val < 0.33) setFocusMode(FocusMode.BREAK);
+                else if (val > 0.66) setFocusMode(FocusMode.DEEP);
+                else setFocusMode(FocusMode.LIGHT);
+              }} />
             </div>
-            <div className="branding-footer">
-              <div className="badge-recess">
-                <div className="silver-badge">
-                  <span className="badge-text">DEYSIGNS</span>
+
+            <div className="status-section">
+              <div className="divider" />
+              <div className="status-footer">
+                <div className="indicator-group">
+                  <div className="led-cluster">
+                    <div className={`led ${isSpotifyConnected ? 'led-active blink-active bg-[#ff0000] shadow-[0_0_15px_rgba(255,0,0,0.8)]' : ''}`} />
+                    <div className="led" />
+                  </div>
+                  <span className="syst-label">SYST_ACTIVE</span>
+                </div>
+                <div className="transport-btns">
+                  <button onClick={() => setShowLibrary(true)} className="transport-icon"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z" /></svg></button>
+                  <button onClick={spotify.next} className="transport-icon"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg></button>
+                  <button onClick={() => setShowHistory(true)} className="transport-icon"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" /></svg></button>
                 </div>
               </div>
-              <div className="technical-footer">
-                <span className="footer-link cursor-pointer hover:text-white transition-colors" onClick={() => window.open('https://github.com/adidey', '_blank')}>ADIDEY_UNIT</span>
-                <span className="footer-link cursor-pointer hover:text-white transition-colors" onClick={() => window.open('https://deysigns.com', '_blank')}>RECORDS_MNG</span>
+              <div className="branding-footer">
+                <div className="badge-recess">
+                  <div className="silver-badge">
+                    <span className="badge-text">DEYSIGNS</span>
+                  </div>
+                </div>
+                <div className="technical-footer">
+                  <span className="footer-link cursor-pointer hover:text-white transition-colors" onClick={() => window.open('https://github.com/adidey', '_blank')}>ADIDEY_UNIT</span>
+                  <span className="footer-link cursor-pointer hover:text-white transition-colors" onClick={() => window.open('https://deysigns.com', '_blank')}>RECORDS_MNG</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        {showHistory && <HistoryPanel history={history} onClose={() => setShowHistory(false)} />}
+        {showLibrary && <PlaylistLibrary onSelect={handleSync} onClose={() => setShowLibrary(false)} />}
       </div>
-
-      {showHistory && <HistoryPanel history={history} onClose={() => setShowHistory(false)} />}
-      {showLibrary && <PlaylistLibrary onSelect={handleSync} onClose={() => setShowLibrary(false)} />}
-    </div>
+      <Analytics />
+    </>
   );
 };
 
