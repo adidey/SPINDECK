@@ -180,7 +180,13 @@ const App: React.FC = () => {
             <div className="status-footer">
               <div className="indicator-group">
                 <div className="led-cluster">
-                  <div className={`led ${isSpotifyConnected ? 'led-active blink-active bg-[#ff0000] shadow-[0_0_15px_rgba(255,0,0,0.8)]' : ''}`} />
+                  <div
+                    className={`led ${isSpotifyConnected ? 'led-active blink-active' : ''}`}
+                    style={isSpotifyConnected ? {
+                      backgroundColor: programState === ProgramState.ENGAGED ? '#1ed760' : '#ff0000',
+                      boxShadow: `0 0 15px ${programState === ProgramState.ENGAGED ? 'rgba(30,215,96,0.8)' : 'rgba(255,0,0,0.8)'}`
+                    } : {}}
+                  />
                   <div className="led" />
                 </div>
                 <span className="syst-label">PRGM_{programState}</span>
@@ -192,7 +198,9 @@ const App: React.FC = () => {
                   onClick={() => spotify.toggleShuffle()}
                   className={`transport-icon ${spotify.isShuffleEnabled ? 'text-white opacity-100' : 'opacity-30'}`}
                 >
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828L15 15M9 9l-.172-.172M15 9l-6 6m0-6l6 6" /></svg>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828L15 15M9 9l-.172-.172M15 9l-6 6m0-6l6 6" />
+                  </svg>
                 </button>
               </div>
             </div>
