@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ProgramState } from './types.ts';
 import { useSpotify } from './hooks/useSpotify.ts';
@@ -7,12 +6,28 @@ import DeviceDisplay from './components/DeviceDisplay.tsx';
 import Knob from './components/Knob.tsx';
 import PlaylistLibrary from './components/PlaylistLibrary.tsx';
 import './App.css';
+import { spatialEngine } from './hooks/SpatialEngine.ts';
 
 const App: React.FC = () => {
-  const [listeningMode, setListeningMode] = useState(0.5); // 0.0 -> 1.0 (continuous control)
+  const [listeningMode, setListeningMode] = useState(0.5); // 0.0 -> 1.0 (spatial control)
   const [showLibrary, setShowLibrary] = useState(false);
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [volume, setVolume] = useState(0.7);
+
+  // Sync listening mode to spatial engine
+  useEffect(() => {
+    spatialEngine.update(listeningMode);
+  }, [listeningMode]);
+
+  // Global interaction handler to unlock Web Audio
+  useEffect(() => {
+    const unlock = () => {
+      spatialEngine.resume();
+      window.removeEventListener('click', unlock);
+    };
+    window.addEventListener('click', unlock);
+    return () => window.removeEventListener('click', unlock);
+  }, []);
 
   // Development bypass logic
   // @ts-ignore
@@ -27,8 +42,8 @@ const App: React.FC = () => {
     spotify.isPlaying ? ProgramState.ENGAGED :
       ProgramState.HOLD;
 
-  // Monitor playback progress for MM:SS display
-  const { timeStr } = usePlaybackMonitor(spotify.progress * (spotify.currentTrack?.durationMs || 0));
+  // Monitor playback progress for MM:SS display (using live ticking elapsedMs)
+  const { timeStr } = usePlaybackMonitor(spotify.elapsedMs);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

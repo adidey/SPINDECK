@@ -55,7 +55,7 @@ const DeviceDisplay: React.FC<DeviceDisplayProps> = ({ track, progress, timeStr,
         </div>
 
         {/* Footer Info */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2 mb-4"> {/* Reduced gap and added margin bottom to pull content up */}
           <div className="flex justify-between items-end">
             <div className="flex flex-col max-w-[60%]">
               <span className="text-[14px] font-pixel tracking-[0.2em] font-bold uppercase truncate">{track.title}</span>

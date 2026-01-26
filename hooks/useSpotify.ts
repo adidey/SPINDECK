@@ -27,10 +27,10 @@ export const useSpotify = () => {
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('spotify_access_token'));
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
   const playerRef = useRef<any>(null);
-
   const [playerError, setPlayerError] = useState<string | null>(null);
 
   const login = useCallback(async () => {
@@ -73,11 +73,22 @@ export const useSpotify = () => {
     }
   }, []);
 
+
+  useEffect(() => {
+    let interval: number;
+    if (isPlaying) {
+      interval = window.setInterval(() => {
+        setElapsedMs(prev => prev + 1000);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
   useEffect(() => {
     if (!accessToken) return;
 
     const init = () => {
-      if (playerRef.current) return; // Prevent double init
+      if (playerRef.current) return;
 
       const player = new (window as any).Spotify.Player({
         name: 'Spinpod',
@@ -89,32 +100,12 @@ export const useSpotify = () => {
         setDeviceId(device_id);
       });
 
-      player.addListener('not_ready', ({ device_id }: { device_id: string }) => {
-        console.log('Device ID has gone offline', device_id);
-      });
-
-      player.addListener('initialization_error', ({ message }: { message: string }) => {
-        console.error('Failed to initialize', message);
-        setPlayerError("INIT_FAILED: " + message);
-      });
-
-      player.addListener('authentication_error', ({ message }: { message: string }) => {
-        console.error('Failed to authenticate', message);
-        setPlayerError("AUTH_ERROR");
-        localStorage.removeItem('spotify_access_token');
-        setAccessToken(null);
-        setPlayerError(null);
-      });
-
-      player.addListener('account_error', ({ message }: { message: string }) => {
-        console.error('Failed to validate Spotify account', message);
-        setPlayerError("PREMIUM_REQUIRED");
-      });
-
       player.addListener('player_state_changed', (state: any) => {
         if (!state) return;
         setIsPlaying(!state.paused);
-        setProgress(state.position / state.duration);
+        setElapsedMs(state.position);
+        setIsShuffleEnabled(state.shuffle);
+
         const track = state.track_window.current_track;
         if (track) {
           setCurrentTrack({
@@ -151,8 +142,6 @@ export const useSpotify = () => {
     };
   }, [accessToken]);
 
-  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
-
   const toggleShuffle = useCallback(async () => {
     if (!accessToken || !deviceId) return;
     try {
@@ -160,7 +149,7 @@ export const useSpotify = () => {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
-      setIsShuffleEnabled(!isShuffleEnabled);
+      // We don't set state here manually; we wait for the SDK event listener to confirm it
     } catch (err) {
       console.error("Shuffle toggle failed", err);
     }
@@ -170,7 +159,9 @@ export const useSpotify = () => {
   const next = useCallback(() => playerRef.current?.nextTrack(), []);
   const seek = useCallback((p: number) => {
     if (playerRef.current && currentTrack) {
-      playerRef.current.seek(Math.floor(p * currentTrack.durationMs));
+      const pos = Math.floor(p * currentTrack.durationMs);
+      playerRef.current.seek(pos);
+      setElapsedMs(pos);
     }
   }, [currentTrack]);
   const setVolume = useCallback((v: number) => playerRef.current?.setVolume(v), []);
@@ -180,7 +171,8 @@ export const useSpotify = () => {
     deviceId,
     isPlaying,
     isShuffleEnabled,
-    progress,
+    progress: currentTrack ? elapsedMs / currentTrack.durationMs : 0,
+    elapsedMs,
     currentTrack,
     playerError,
     isPlayerReady: !!deviceId,
