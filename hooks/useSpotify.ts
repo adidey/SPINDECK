@@ -24,7 +24,7 @@ const base64encode = (input: ArrayBuffer) => {
 };
 
 export const useSpotify = () => {
-  const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('spotify_access_token'));
+  const [accessToken, setAccessToken] = useState<string | null>(sessionStorage.getItem('spotify_access_token'));
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
@@ -38,7 +38,7 @@ export const useSpotify = () => {
     const codeVerifier = generateRandomString(128);
     const challengeBuffer = await sha256(codeVerifier);
     const codeChallenge = base64encode(challengeBuffer);
-    localStorage.setItem('spotify_code_verifier', codeVerifier);
+    sessionStorage.setItem('spotify_code_verifier', codeVerifier);
 
     const scope = 'user-read-playback-state user-modify-playback-state streaming playlist-read-private user-read-currently-playing user-read-private user-read-email';
     const authUrl = new URL("https://accounts.spotify.com/authorize");
@@ -50,7 +50,7 @@ export const useSpotify = () => {
   }, []);
 
   const handleAuthCode = useCallback(async (code: string) => {
-    const codeVerifier = localStorage.getItem('spotify_code_verifier');
+    const codeVerifier = sessionStorage.getItem('spotify_code_verifier');
     const redirectUri = window.location.origin + window.location.pathname;
     try {
       const response = await fetch('https://accounts.spotify.com/api/token', {
@@ -63,13 +63,25 @@ export const useSpotify = () => {
       });
       const data = await response.json();
       if (data.access_token) {
-        localStorage.setItem('spotify_access_token', data.access_token);
+        sessionStorage.setItem('spotify_access_token', data.access_token);
         setAccessToken(data.access_token);
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     } catch (err) {
       console.error("Auth exchange failed", err);
       setPlayerError("AUTH_FAILED");
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    sessionStorage.clear();
+    setAccessToken(null);
+    setDeviceId(null);
+    setIsPlaying(false);
+    setCurrentTrack(null);
+    if (playerRef.current) {
+      playerRef.current.disconnect();
+      playerRef.current = null;
     }
   }, []);
 
@@ -182,6 +194,7 @@ export const useSpotify = () => {
     next,
     seek,
     setVolume,
-    toggleShuffle
+    toggleShuffle,
+    logout
   };
 };

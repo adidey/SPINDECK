@@ -16,9 +16,8 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const processingCode = useRef(false);
 
-  // Development bypass logic
-  // @ts-ignore
-  const [isSpotifyConnected, setIsSpotifyConnected] = useState(import.meta.env.DEV);
+  // Development bypass logic removed
+  const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
 
   const spotify = useSpotify();
 
@@ -158,6 +157,14 @@ const App: React.FC = () => {
             >
               {isSyncing ? 'SYNCING...' : spotify.accessToken ? 'BOOT_FEED' : 'CONNECT_UNIT'}
             </button>
+            {spotify.accessToken && (
+              <button
+                onClick={spotify.logout}
+                className="text-[8px] font-mono text-white/20 uppercase tracking-widest hover:text-white/60 transition-colors"
+              >
+                [ RESET_SESSION ]
+              </button>
+            )}
           </div>
           <div className="branding-footer">
             <div className="boot-badge-recess"><div className="boot-badge-inner"><span>DEYSIGNS</span></div></div>
