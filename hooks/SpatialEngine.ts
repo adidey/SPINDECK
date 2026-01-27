@@ -81,8 +81,6 @@ export class SpatialEngine {
         if (this.context.state === 'suspended') this.context.resume();
 
         // Map 0 -> 1 to pan position/width
-        // 0.0 is narrow (centered), 1.0 is full width
-        // Note: StereoPanner is -1 to 1, but we use it here as a mix proxy for the "room tone"
         if (this.widthNode) {
             this.widthNode.pan.setTargetAtTime(0, this.context.currentTime, 0.1);
         }
@@ -93,11 +91,18 @@ export class SpatialEngine {
             this.reverbGain.gain.setTargetAtTime(reverbAmount, this.context.currentTime, 0.1);
         }
 
-        // Audible noise floor mapping
+        // Audible noise floor mapping - only if active
         if (this.noiseGain) {
-            // Increase spatial noise slightly to demonstrate width
-            this.noiseGain.gain.setTargetAtTime(0.01 + (modeValue * 0.03), this.context.currentTime, 0.1);
+            const targetGain = 0.01 + (modeValue * 0.03);
+            this.noiseGain.gain.setTargetAtTime(targetGain, this.context.currentTime, 0.1);
         }
+    }
+
+    public setPlaybackActive(isActive: boolean) {
+        if (!this.context || !this.masterBus) return;
+        // Fade master bus based on playback to ensure zero noise when stopped
+        const target = isActive ? 1.0 : 0.0;
+        this.masterBus.gain.setTargetAtTime(target, this.context.currentTime, 0.1);
     }
 
     public resume() {

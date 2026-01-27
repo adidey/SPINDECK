@@ -13,11 +13,23 @@ const App: React.FC = () => {
   const [showLibrary, setShowLibrary] = useState(false);
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [volume, setVolume] = useState(0.7);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const processingCode = useRef(false);
 
-  // Sync listening mode to spatial engine
+  // Development bypass logic
+  // @ts-ignore
+  const [isSpotifyConnected, setIsSpotifyConnected] = useState(import.meta.env.DEV);
+
+  const spotify = useSpotify();
+
+  // Sync listening mode and playback state to spatial engine
   useEffect(() => {
     spatialEngine.update(listeningMode);
   }, [listeningMode]);
+
+  useEffect(() => {
+    spatialEngine.setPlaybackActive(spotify.isPlaying);
+  }, [spotify.isPlaying]);
 
   // Global interaction handler to unlock Web Audio
   useEffect(() => {
@@ -28,14 +40,6 @@ const App: React.FC = () => {
     window.addEventListener('click', unlock);
     return () => window.removeEventListener('click', unlock);
   }, []);
-
-  // Development bypass logic
-  // @ts-ignore
-  const [isSpotifyConnected, setIsSpotifyConnected] = useState(import.meta.env.DEV);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const processingCode = useRef(false);
-
-  const spotify = useSpotify();
 
   // Real-time Program State monitoring
   const programState = !isSpotifyConnected ? ProgramState.STANDBY :
@@ -68,7 +72,10 @@ const App: React.FC = () => {
 
   const handleSync = async (url: string) => {
     const target = url || playlistUrl;
+    console.log("Starting sync for:", target);
+
     if (!spotify.accessToken) {
+      console.log("No access token, logging in...");
       spotify.login();
       return;
     }
@@ -76,15 +83,27 @@ const App: React.FC = () => {
     setIsSyncing(true);
     try {
       const id = target.match(/playlist\/([a-zA-Z0-9]+)/)?.[1];
-      if (id && spotify.deviceId) {
-        await spotify.setVolume(1.0);
-        await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${spotify.deviceId}`, {
-          method: 'PUT',
-          headers: { 'Authorization': `Bearer ${spotify.accessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ context_uri: `spotify:playlist:${id}` })
-        });
-        setIsSpotifyConnected(true);
-      } else if (!id) {
+      console.log("Found playlist ID:", id, "Device ID:", spotify.deviceId);
+
+      if (id) {
+        if (spotify.deviceId) {
+          await spotify.setVolume(1.0);
+          const res = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${spotify.deviceId}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${spotify.accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ context_uri: `spotify:playlist:${id}` })
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error?.message || 'SPOTIFY_API_ERROR');
+          }
+          setIsSpotifyConnected(true);
+        } else {
+          console.warn("Playlist ID found but Device ID missing. Forcing connection anyway.");
+          setIsSpotifyConnected(true);
+        }
+      } else {
+        console.log("No playlist ID found, entering manual mode.");
         setIsSpotifyConnected(true);
       }
     } catch (err: any) {
