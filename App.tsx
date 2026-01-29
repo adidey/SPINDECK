@@ -144,7 +144,7 @@ const App: React.FC = () => {
             <div className="boot-input-well">
               <input
                 type="text"
-                placeholder="SOURCE_URL..."
+                placeholder="paste playlist link"
                 value={playlistUrl}
                 onChange={(e) => setPlaylistUrl(e.target.value)}
                 className="boot-input"
